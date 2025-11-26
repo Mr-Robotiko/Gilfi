@@ -12,15 +12,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
 
-set(TS_FILES Gilfi_en_DE.ts)
+set(TS_FILES i18n/Gilfi_en_DE.ts)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+        src/main.cpp
+        src/mainwindow.cpp
+        src/mainwindow.ui
+        src/page_networkscan.cpp
+        src/page_networkscan.ui
+        src/page_rsaencryption.cpp
+        src/page_rsaencryption.ui
+        src/page_hashcrack.cpp
+        src/page_hashcrack.ui
         ${TS_FILES}
 )
+
+file(GLOB_RECURSE PROJECT_HEADERS "include/*.h")
+list(APPEND PROJECT_SOURCES ${PROJECT_HEADERS})
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(Gilfi
@@ -48,6 +56,10 @@ else()
 
     qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
+
+target_include_directories(Gilfi PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include 
+)
 
 target_link_libraries(Gilfi PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
