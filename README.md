@@ -4,6 +4,13 @@
 
 ## 📌 Table of Contents
 
+## Installation
+
+Go to the [Releases](https://github.com/Mr-Robotiko/Gilfi/releases) page of Gilfi.
+
+> [!IMPORTANT]
+> You need to have [Podman](https://podman.io/docs/installation) installed in order to install Gilfi. From there, it's easy.
+
 ## Project idea
 
 ![structure](documentation/assets/project-structure.png)
