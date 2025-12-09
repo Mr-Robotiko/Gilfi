@@ -5,6 +5,7 @@
 #include "page_networkscan.h"
 #include "page_rsaencryption.h"
 #include "page_hashcrack.h"
+#include "test_page.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -15,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->toolbar->addWidget(new page_hashcrack(this));
     ui->toolbar->addWidget(new page_networkscan(this));
     ui->toolbar->addWidget(new page_rsaencryption(this));
+    ui->toolbar->addWidget(new test_page(this));
 
     // connect with logic
     // important! - the order of the pages must match the order in the navigation bar.
