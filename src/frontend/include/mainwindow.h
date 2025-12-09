@@ -13,6 +13,7 @@ QT_END_NAMESPACE
 class page_hashcrack;
 class page_networkscan;
 class page_rsaencryption;
+class test_page;
 
 class MainWindow : public QMainWindow
 {
