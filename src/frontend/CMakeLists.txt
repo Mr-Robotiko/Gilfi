@@ -24,6 +24,8 @@ set(PROJECT_SOURCES
         src/page_rsaencryption.ui
         src/page_hashcrack.cpp
         src/page_hashcrack.ui
+        src/test_page.cpp
+        src/test_page.ui
         ${TS_FILES}
 )
 
