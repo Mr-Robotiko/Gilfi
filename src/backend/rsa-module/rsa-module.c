@@ -7,17 +7,17 @@
 
 typedef struct {
     
-    int e;
-    int d;
+    long long e;
+    long long d;
     long long n;
 
 } RSAKeys;
 
-int is_prime(int number) {
+int is_prime(long long number) {
 
     if (number < 2) return 0;
     
-    for (int i = 2; i * i <= number; i++) {
+    for (long long i = 2; i * i <= number; i++) {
         if(number % i == 0) {
             return 0;
         }
@@ -26,10 +26,10 @@ int is_prime(int number) {
     return 1;
 }
 
-int gcd(int a, int b) {
+long long gcd(long long a, long long b) {
 
     while(b != 0) {
-        int temp = b;
+        long long temp = b;
         b = a % b;
         a = temp;
     }
@@ -37,17 +37,14 @@ int gcd(int a, int b) {
     return a;
 }
 
-int get_mod_inv(int a, int b) {
-
+long long get_mod_inv(long long a, long long b) {
     a = a % b;
-
-    for(long long x = 1; x < b; x++) {
-        if(((long long)a * x) % b == 1) {
-            return (int)x;
+    for (long long x = 1; x < b; x++) {
+        if ((a * x) % b == 1) {
+            return x;
         }
     }
-
-    return -1; 
+    return -1;
 }
 
 long long mod_pow(long long base, long long exp, long long mod) {
@@ -70,7 +67,7 @@ RSAKeys key_generation() {
 
     RSAKeys keys;
 
-    int p = 0, q = 0;
+    long long p = 0, q = 0;
 
     srand(time(NULL));
 
@@ -81,23 +78,23 @@ RSAKeys key_generation() {
     while (!is_prime(q) || q == p)
         q = rand() % 50000 + 20000;
 
-    printf("p = %d\n", p);
-    printf("q = %d\n", q);
+    printf("p = %lld\n", p);
+    printf("q = %lld\n", q);
 
     // 2) n and phi
-    long long n = (long long)p * q;
-    long long phi = (long long)(p - 1) * (q - 1);
+    long long n = p * q;
+    long long phi = (p - 1) * (q - 1);
 
     printf("n = %lld\n", n);
     printf("phi = %lld\n", phi);
 
     // 3) find e
-    int e = 0;
+    long long e = 0;
     while (e < 2 || gcd(e, phi) != 1)
         e = rand() % (phi - 2) + 2;
 
     // 4) d = e⁻¹ mod phi
-    int d = get_mod_inv(e, phi);
+    long long d = get_mod_inv(e, phi);
 
     if (d == -1) {
         printf("Error: get_mod_inv returned no result.\n");
@@ -111,12 +108,12 @@ RSAKeys key_generation() {
     return keys;
 }
 
-long long encrypt(long long M, int e, long long n) {
+long long encrypt(long long M, long long e, long long n) {
     // Cipher = Message^e mod n
     return mod_pow(M, e, n);
 }
 
-long long decrypt(long long C, int d, long long n) {
+long long decrypt(long long C, long long d, long long n) {
     // Message = Cipher^d mod n
     return mod_pow(C, d, n);
 }
@@ -139,8 +136,8 @@ int main(int argc, char *argv[]) {
     RSAKeys keys = key_generation();
     printf("--------------------------\n");
 
-    printf("\nPublic Key (e, n) = (%d, %lld)\n", keys.e, keys.n);
-    printf("Private Key (d, n) = (%d, %lld)\n", keys.d, keys.n);
+    printf("\nPublic Key (e, n) = (%lld, %lld)\n", keys.e, keys.n);
+    printf("Private Key (d, n) = (%lld, %lld)\n", keys.d, keys.n);
     
     // Is M < n?
     if (plaintext >= keys.n) {
@@ -152,7 +149,7 @@ int main(int argc, char *argv[]) {
 
     // Encryption
     long long ciphertext = encrypt(plaintext, keys.e, keys.n);
-    printf("Ciphertext (C) (%lld^%d mod %lld) = %lld\n", plaintext, keys.e, keys.n, ciphertext);
+    printf("Ciphertext (C) (%lld^%lld mod %lld) = %lld\n", plaintext, keys.e, keys.n, ciphertext);
 
     // Decryption
     long long decrypted_message = decrypt(ciphertext, keys.d, keys.n);
