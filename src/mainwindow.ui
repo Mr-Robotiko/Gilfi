@@ -16,6 +16,7 @@
   <property name="styleSheet">
    <string notr="true">QLineEdit {
     padding: 5px;
+    color: #000000;
     border: 1px solid #b0b0b0;
     border-radius: 4px;
     background-color: #f7f7f7; 
@@ -113,9 +114,9 @@ QLabel {
 }</string>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>-1</number>
       </property>
-      </widget>
+     </widget>
     </item>
    </layout>
   </widget>

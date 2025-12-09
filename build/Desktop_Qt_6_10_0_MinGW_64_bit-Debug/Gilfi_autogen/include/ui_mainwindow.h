@@ -38,6 +38,7 @@ public:
         MainWindow->resize(800, 600);
         MainWindow->setStyleSheet(QString::fromUtf8("QLineEdit {\n"
 "    padding: 5px;\n"
+"    color: #000000;\n"
 "    border: 1px solid #b0b0b0;\n"
 "    border-radius: 4px;\n"
 "    background-color: #f7f7f7; \n"
@@ -134,7 +135,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        toolbar->setCurrentIndex(0);
+        toolbar->setCurrentIndex(-1);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
