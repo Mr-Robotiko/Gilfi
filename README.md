@@ -13,17 +13,17 @@
 ### AskGilfi 
 
 > [!NOTE]
-> Diese nachfolgenden Commands zeigen, wie der Podman Container für AskGilfi aufgebaut wird. Die Installationsautomatisierung wird im Branch `feature/ask-gilfi` entwickelt.
+> The following commands demonstrate how to set up the Podman container for AskGilfi. The installation automation is being developed in the branch `feature/ask-gilfi`.
 
-Podman Ollama Container installieren:
+Install Podman Ollama Container:
 ```
 podman run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
-Granite pullen:
+Pull Granite:
 ```
 podman exec -it ollama ollama run granite4:350m
 ```
-Anfrage an Granite stellen:
+Send request to Granite:
 ```
 curl -X POST http://localhost:11434/api/generate -d '{
   "model": "granite4:350m",
