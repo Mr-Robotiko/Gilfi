@@ -211,3 +211,6 @@ __marimo__/
 
 target/
 *.lock
+
+rockyou.txt
+*.db
