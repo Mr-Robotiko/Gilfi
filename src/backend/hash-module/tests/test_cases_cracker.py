@@ -40,7 +40,7 @@ class TestCracker(unittest.TestCase):
     @patch("builtins.open", new_callable = mock_open, read_data = "password\nadmin\nsecret\n12345")
     def test_successful_crack(self, mock_file):
         """Verify the cracker finds the word in the list and saves it to cache."""
-        result = self.cracker.crack(self.sample_hash, "/Users/raphaeltack/Gilfi/data/wordlist/rockyou.txt", "MD5")
+        result = self.cracker.crack(self.sample_hash, "<your path>", "MD5")
 
         self.assertEqual(result, "secret")
         # Verify it was cached

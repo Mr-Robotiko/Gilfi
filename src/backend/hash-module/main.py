@@ -20,7 +20,7 @@ def hash_test():
 
 
 def crack_test():
-    wordlist_path: str = "/Users/raphaeltack/Gilfi/data/wordlist/rockyou.txt"
+    wordlist_path: str = "<wordlist path>" # just for test purposes (wordlist in data/wordlists/rockyou)
     cracker: Cracker = Cracker()
     (message, algorithm) = read_input()
     print(cracker.crack(message, wordlist_path, algorithm))
