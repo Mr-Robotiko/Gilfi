@@ -1,9 +1,6 @@
 from typing import Tuple
-
-
-def main():
-    # Your logic here
-    pass
+from hash_lib.hash_core.hasher import Hasher
+from hash_lib.hash_cracker.cracker import Cracker
 
 
 def read_input() -> Tuple[str, str]:
@@ -16,10 +13,22 @@ def read_input() -> Tuple[str, str]:
         raise AttributeError
 
 
-def main():
+def hash_test():
     hasher: Hasher = Hasher()
     (message, algorithm) = read_input()
-    print(Hasher.hash(message, algorithm))
+    print(hasher.hash(message, algorithm))
+
+
+def crack_test():
+    wordlist_path: str = "/Users/raphaeltack/Gilfi/data/wordlist/rockyou.txt"
+    cracker: Cracker = Cracker()
+    (message, algorithm) = read_input()
+    print(cracker.crack(message, wordlist_path, algorithm))
+
+
+def main():
+    hash_test()
+    crack_test()
 
 
 if __name__ == '__main__':
