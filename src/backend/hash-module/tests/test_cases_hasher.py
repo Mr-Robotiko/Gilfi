@@ -1,6 +1,6 @@
 import unittest
 import hashlib
-from hasher import Hasher
+from hash_lib.hash_core.hasher import Hasher
 
 
 class TestHasher(unittest.TestCase):

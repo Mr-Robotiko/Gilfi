@@ -1,6 +1,9 @@
 from typing import Tuple
 
-from hasher import Hasher
+
+def main():
+    # Your logic here
+    pass
 
 
 def read_input() -> Tuple[str, str]:
