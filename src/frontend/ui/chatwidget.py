@@ -1,7 +1,6 @@
 """
-Gilfi - ChatWidget für Ask-Gilfi
-Schickt nachrichten an die ollama api auf localhost:11434.
-Geht mit podman container oder lokalem binary.
+Gilfi - Ask Gilfi Chat Widget
+Talks to the Ollama API on localhost:11434.
 """
 
 import json
@@ -12,16 +11,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
-# ollama api settings
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "ask-gilfi"
 
 
 class ChatWorker(QThread):
-    """
-    eigener thread damit die gui nicht einfriert
-    wenn gilfi nachdenkt. streamt die antwort token für token.
-    """
+    """runs the api request in a background thread"""
     token_received = pyqtSignal(str)
     finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
@@ -31,7 +26,7 @@ class ChatWorker(QThread):
         self.prompt = prompt
 
     def run(self):
-        import requests  # hier importiert wegen ladezeit
+        import requests
 
         payload = {
             "model": MODEL_NAME,
@@ -54,17 +49,16 @@ class ChatWorker(QThread):
 
         except requests.exceptions.ConnectionError:
             self.error_occurred.emit(
-                "Verbindung fehlgeschlagen! Ist der Ollama-Container gestartet? "
+                "Connection failed! Is the Ollama container running? "
                 "(podman start ollama)"
             )
         except Exception as e:
-            self.error_occurred.emit(f"Fehler: {e}")
+            self.error_occurred.emit(f"Error: {e}")
 
         self.finished.emit()
 
 
 class ChatWidget(QWidget):
-    """chat fenster mit verlauf, eingabefeld und senden button"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -76,28 +70,25 @@ class ChatWidget(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
 
-        # hinweis
-        hint = QLabel("Offline-Chatbot (Ollama)")
+        hint = QLabel("Offline Chatbot (Ollama)")
         hint.setStyleSheet("color: #555570; font-size: 10px;")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint)
 
-        # chatverlauf
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
-        self.chat_display.setPlaceholderText("Starte eine Unterhaltung mit Gilfi ...")
+        self.chat_display.setPlaceholderText("Start a conversation with Gilfi ...")
         layout.addWidget(self.chat_display, stretch=1)
 
-        # eingabe + button
         input_row = QHBoxLayout()
         input_row.setSpacing(6)
 
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Nachricht eingeben ...")
+        self.input_field.setPlaceholderText("Type a message ...")
         self.input_field.returnPressed.connect(self.send_message)
         input_row.addWidget(self.input_field, stretch=1)
 
-        self.btn_send = QPushButton("Senden")
+        self.btn_send = QPushButton("Send")
         self.btn_send.setObjectName("btnRun")
         self.btn_send.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_send.clicked.connect(self.send_message)
@@ -109,20 +100,14 @@ class ChatWidget(QWidget):
         prompt = self.input_field.text().strip()
         if not prompt:
             return
-
-        # nicht doppelt senden
         if self.worker and self.worker.isRunning():
             return
 
-        # user nachricht anzeigen
-        self.chat_display.append(f"<b style='color:#53a8d8;'>Du:</b> {prompt}")
+        self.chat_display.append(f"<b style='color:#53a8d8;'>You:</b> {prompt}")
         self.input_field.clear()
-
-        # gilfi antwort vorbereiten
         self.chat_display.append("<b style='color:#4ade80;'>Gilfi:</b> ")
         self.btn_send.setEnabled(False)
 
-        # worker starten
         self.worker = ChatWorker(prompt)
         self.worker.token_received.connect(self.on_token)
         self.worker.error_occurred.connect(self.on_error)
@@ -130,7 +115,6 @@ class ChatWidget(QWidget):
         self.worker.start()
 
     def on_token(self, token):
-        """token an die letzte zeile anhängen"""
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
         cursor.insertText(token)

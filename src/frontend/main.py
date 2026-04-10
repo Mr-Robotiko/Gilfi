@@ -1,12 +1,11 @@
 """
 Gilfi - Security Tool Suite
-Einstiegspunkt der Anwendung
 """
 
 import sys
 import os
 
-# backend hash-lib zum path hinzufügen damit wir die direkt importieren können
+# add backend hash-lib to path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HASH_LIB_PATH = os.path.join(BASE_DIR, "..", "backend", "hash-module", "src")
 sys.path.insert(0, HASH_LIB_PATH)

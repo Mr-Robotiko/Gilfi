@@ -4,7 +4,6 @@ Gilfi - Dark Theme Stylesheet
 
 STYLESHEET = """
 
-/* ── Allgemein ───────────────────────────────────────── */
 QMainWindow {
     background: #1a1a2e;
 }
@@ -13,7 +12,7 @@ QWidget {
     font-size: 13px;
 }
 
-/* ── Menüleiste ──────────────────────────────────────── */
+/* menu bar */
 QMenuBar {
     background: #16213e;
     color: #e0e0e0;
@@ -41,7 +40,7 @@ QMenu::item:selected {
     background: #0f3460;
 }
 
-/* ── Navigation ──────────────────────────────────────── */
+/* navigation */
 QListWidget#navList {
     background: #16213e;
     border: none;
@@ -65,13 +64,13 @@ QListWidget#navList::item:selected {
     font-weight: bold;
 }
 
-/* ── Splitter ────────────────────────────────────────── */
+/* splitter */
 QSplitter::handle {
     background: #0f3460;
     width: 1px;
 }
 
-/* ── GroupBox ────────────────────────────────────────── */
+/* group boxes */
 QGroupBox {
     background: #1a1a2e;
     border: 1px solid #0f3460;
@@ -87,7 +86,7 @@ QGroupBox::title {
     color: #53a8d8;
 }
 
-/* ── Eingabefelder ───────────────────────────────────── */
+/* input fields */
 QLineEdit {
     background: #0f0f23;
     border: 1px solid #0f3460;
@@ -102,7 +101,7 @@ QLineEdit::placeholder {
     color: #555570;
 }
 
-/* ── Buttons ─────────────────────────────────────────── */
+/* buttons */
 QPushButton#btnRun {
     background: #0f3460;
     color: #ffffff;
@@ -118,7 +117,7 @@ QPushButton#btnRun:pressed {
     background: #0a2640;
 }
 
-/* ── Output ──────────────────────────────────────────── */
+/* output */
 QTextEdit {
     background: #0f0f23;
     border: 1px solid #0f3460;
@@ -129,7 +128,7 @@ QTextEdit {
     font-size: 12px;
 }
 
-/* ── StatusBar ───────────────────────────────────────── */
+/* status bar */
 QStatusBar {
     background: #16213e;
     color: #8a8aa0;
@@ -137,7 +136,7 @@ QStatusBar {
     font-size: 11px;
 }
 
-/* ── Scrollbar ───────────────────────────────────────── */
+/* scrollbar */
 QScrollBar:vertical {
     background: #1a1a2e;
     width: 8px;
@@ -151,7 +150,7 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0;
 }
 
-/* ── Ask Gilfi Toggle-Button ─────────────────────────────── */
+/* ask gilfi toggle */
 QPushButton#chatToggle {
     background: #0f3460;
     color: #53a8d8;
@@ -171,7 +170,7 @@ QPushButton#chatToggle:checked {
     color: #4ade80;
 }
 
-/* ── Chat Dock ───────────────────────────────────────────── */
+/* chat dock */
 QDockWidget#chatDock {
     font-weight: bold;
     color: #53a8d8;

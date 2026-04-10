@@ -1,7 +1,5 @@
 """
-Gilfi - Hauptfenster
-Menü, Navigation links, Tools rechts, Statusleiste unten.
-Ask-Gilfi Chatbot über Button unten links aufklappbar.
+Gilfi - Main Window
 """
 
 from PyQt6.QtWidgets import (
@@ -28,7 +26,7 @@ class MainWindow(QMainWindow):
         self.setup_chatbot_dock()
         self.setup_statusbar()
 
-        self.nav_list.setCurrentRow(0)  # erstes tool auswählen
+        self.nav_list.setCurrentRow(0)
 
     def setup_menubar(self):
         menubar = self.menuBar()
@@ -51,7 +49,7 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
 
-        # linke seite - navigation
+        # left side - navigation
         nav_widget = QWidget()
         nav_widget.setMinimumWidth(190)
         nav_widget.setMaximumWidth(260)
@@ -78,12 +76,11 @@ class MainWindow(QMainWindow):
         line.setStyleSheet("color: #0f3460;")
         nav_layout.addWidget(line)
 
-        # liste mit den tools
         self.nav_list = QListWidget()
         self.nav_list.setObjectName("navList")
         nav_layout.addWidget(self.nav_list, stretch=1)
 
-        # chatbot toggle button unten in der nav
+        # chatbot toggle at the bottom
         self.chat_toggle = QPushButton("💬  Ask Gilfi")
         self.chat_toggle.setObjectName("chatToggle")
         self.chat_toggle.setCheckable(True)
@@ -93,7 +90,7 @@ class MainWindow(QMainWindow):
 
         splitter.addWidget(nav_widget)
 
-        # rechte seite - tool pages
+        # right side - tool pages
         self.stack = QStackedWidget()
         splitter.addWidget(self.stack)
 
@@ -102,14 +99,10 @@ class MainWindow(QMainWindow):
         splitter.setSizes([210, 750])
 
         self.setCentralWidget(splitter)
-
-        # klick in der liste -> seite wechseln
         self.nav_list.currentRowChanged.connect(self.stack.setCurrentIndex)
-
         self.register_tools()
 
     def setup_chatbot_dock(self):
-        """dock widget für den ask-gilfi chat, startet versteckt"""
         self.chat_widget = ChatWidget()
 
         self.chat_dock = QDockWidget("Ask Gilfi", self)
@@ -124,8 +117,6 @@ class MainWindow(QMainWindow):
 
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.chat_dock)
         self.chat_dock.hide()
-
-        # sync toggle button wenn dock über X geschlossen wird
         self.chat_dock.visibilityChanged.connect(self.on_dock_visibility_changed)
 
     def toggle_chatbot(self):
@@ -143,7 +134,7 @@ class MainWindow(QMainWindow):
         status.showMessage("Bereit")
 
     def register_tools(self):
-        """module laden - einfach neue zeile für neues tool"""
+        """add new tools here"""
         tools = [
             ("Network Scanner",  network_scanner.create_page()),
             ("Port Scanner",     port_scanner.create_page()),

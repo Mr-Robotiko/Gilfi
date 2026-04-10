@@ -1,7 +1,6 @@
 """
 Gilfi - ToolPage
-Wiederverwendbares Widget für jedes Tool.
-Besteht aus einem Input-Bereich und einem Output-Bereich.
+Reusable widget for each tool module.
 """
 
 from PyQt6.QtWidgets import (
@@ -12,21 +11,14 @@ from PyQt6.QtCore import Qt
 
 
 class ToolPage(QWidget):
-    """
-    Jedes Modul bekommt eine eigene ToolPage.
-    Aufbau:
-        - Titel + Beschreibung
-        - Input-Area mit beliebig vielen Feldern + Run-Button
-        - Output-Area (read-only, Monospace)
-    """
 
     def __init__(self, title, description="", parent=None):
         super().__init__(parent)
         self.title = title
         self.description = description
-        self.fields = {}       # label -> QLineEdit
+        self.fields = {}
         self.field_row = 0
-        self.on_run = None     # Callback: on_run(page)
+        self.on_run = None
 
         self.setup_ui()
 
@@ -35,12 +27,10 @@ class ToolPage(QWidget):
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(10)
 
-        # Titel
         title_label = QLabel(self.title)
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #ffffff;")
         layout.addWidget(title_label)
 
-        # Beschreibung
         if self.description:
             desc_label = QLabel(self.description)
             desc_label.setStyleSheet("color: #8a8aa0; font-size: 12px;")
@@ -49,7 +39,7 @@ class ToolPage(QWidget):
 
         layout.addSpacing(4)
 
-        # ── Input-Bereich ────────────────────────────────────────────
+        # input area
         self.input_group = QGroupBox("Input")
         input_layout = QVBoxLayout(self.input_group)
         input_layout.setContentsMargins(12, 18, 12, 10)
@@ -61,7 +51,6 @@ class ToolPage(QWidget):
         self.input_grid.setColumnStretch(1, 1)
         input_layout.addLayout(self.input_grid)
 
-        # Button-Zeile
         btn_row = QHBoxLayout()
         self.status_label = QLabel("")
         btn_row.addWidget(self.status_label)
@@ -76,23 +65,20 @@ class ToolPage(QWidget):
         input_layout.addLayout(btn_row)
         layout.addWidget(self.input_group)
 
-        # ── Output-Bereich ───────────────────────────────────────────
+        # output area
         self.output_group = QGroupBox("Output")
         output_layout = QVBoxLayout(self.output_group)
         output_layout.setContentsMargins(12, 18, 12, 10)
 
         self.output_text = QTextEdit()
         self.output_text.setReadOnly(True)
-        self.output_text.setPlaceholderText("Ergebnisse erscheinen hier ...")
+        self.output_text.setPlaceholderText("Results will appear here ...")
         self.output_text.setMinimumHeight(100)
         output_layout.addWidget(self.output_text)
 
         layout.addWidget(self.output_group, stretch=1)
 
-    # ── Öffentliche Methoden ─────────────────────────────────────────
-
     def add_field(self, label, placeholder=""):
-        """Fügt ein Eingabefeld mit Label hinzu."""
         lbl = QLabel(label)
         lbl.setStyleSheet("color: #8a8aa0; font-size: 12px;")
 
@@ -105,22 +91,18 @@ class ToolPage(QWidget):
         self.field_row += 1
 
     def get_input(self, label):
-        """Gibt den Text eines Eingabefelds zurück."""
         widget = self.fields.get(label)
         if widget:
             return widget.text().strip()
         return ""
 
     def append_output(self, text):
-        """Hängt eine Zeile an die Ausgabe an."""
         self.output_text.append(text)
 
     def clear_output(self):
-        """Leert die Ausgabe."""
         self.output_text.clear()
 
     def set_status(self, text, error=False):
-        """Zeigt eine Statusmeldung unter dem Button."""
         color = "#f06b78" if error else "#4ade80"
         self.status_label.setText(text)
         self.status_label.setStyleSheet(f"color: {color}; font-size: 11px;")
@@ -129,10 +111,9 @@ class ToolPage(QWidget):
         self.btn_run.setText(text)
 
     def handle_run(self):
-        """Wird aufgerufen wenn der Button geklickt wird."""
         if callable(self.on_run):
             self.on_run(self)
         else:
             self.clear_output()
-            self.append_output(f"[{self.title}] Modul noch nicht verbunden.")
-            self.set_status("Kein Modul angebunden", error=True)
+            self.append_output(f"[{self.title}] Module not connected.")
+            self.set_status("No module connected", error=True)
