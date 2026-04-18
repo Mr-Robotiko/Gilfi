@@ -21,7 +21,13 @@ ASKGILFI_SCRIPT = "/app/backend/ask-gilfi-module/ask-gilfi-chat.py"
 sys.path.insert(0, '/app/backend/hash-module/src')
 sys.path.insert(0, os.path.dirname(ASKGILFI_SCRIPT))
 
-from ask_gilfi_chat import start_gilfi, ask_gilfi
+# Import ask-gilfi module using importlib (file has hyphens in name)
+import importlib.util
+spec = importlib.util.spec_from_file_location("ask_gilfi_chat", ASKGILFI_SCRIPT)
+ask_gilfi_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ask_gilfi_module)
+start_gilfi = ask_gilfi_module.start_gilfi
+ask_gilfi = ask_gilfi_module.ask_gilfi
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
