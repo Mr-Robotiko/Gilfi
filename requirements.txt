@@ -1,2 +1,3 @@
 PyQt6==6.11.0
+pyqt6_sip==13.11.1
 Requests==2.33.1
