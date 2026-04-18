@@ -1,0 +1,22 @@
+services:
+  gilfi-backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: gilfi_backend
+    environment:
+      - OLLAMA_MODELS=/app/backend/ask-gilfi-module/models
+      - FLASK_APP=api_server.py
+    volumes:
+      # Mount data directory for wordlists and assets
+      - ./data:/app/data
+      # Mount backend source for development
+      - ./src/backend:/app/backend
+    stdin_open: true
+    tty: true
+    # Use bridge network instead of host to avoid permission issues
+    ports:
+      - "11434:11434"  # Ollama API port
+      - "8000:8000"    # Backend API port
+    # Start API server after entrypoint setup
+    command: python /app/backend/api_server.py
