@@ -65,5 +65,3 @@ def _run_crack(page, hash_value, algo):
     except Exception as e:
         page.append_output(f"[ERROR] {e}")
         page.set_status("Error", error=True)
-
-# Made with Bob

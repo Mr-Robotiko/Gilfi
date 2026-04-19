@@ -83,5 +83,3 @@ def _run_identify(page, hash_value):
     except Exception as e:
         page.set_status("Error", error=True)
         page.append_output(f"Error: {str(e)}")
-
-# Made with Bob

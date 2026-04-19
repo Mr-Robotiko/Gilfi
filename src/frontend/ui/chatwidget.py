@@ -239,5 +239,3 @@ class ChatWidget(QWidget):
         """Clean up when widget is closed"""
         stop_ollama_server()
         super().closeEvent(event)
-
-# Made with Bob

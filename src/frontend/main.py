@@ -1,15 +1,9 @@
 """
 Gilfi - Security Tool Suite
+Frontend application that communicates with dockerized backend via REST API
 """
 
 import sys
-import os
-
-# add backend hash-lib to path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-HASH_LIB_PATH = os.path.join(BASE_DIR, "..", "backend", "hash-module", "src")
-sys.path.insert(0, HASH_LIB_PATH)
-
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QFont
 from ui.mainwindow import MainWindow

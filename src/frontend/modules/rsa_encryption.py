@@ -117,5 +117,3 @@ def run(page):
     _worker.finished_ok.connect(lambda: page.set_status("Done"))
 
     _worker.start()
-
-# Made with Bob
