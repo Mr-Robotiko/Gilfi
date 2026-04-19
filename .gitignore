@@ -215,3 +215,4 @@ target/
 rockyou.txt
 *.db
 *.DS_Store
+rsa-module

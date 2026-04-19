@@ -1,14 +1,10 @@
 """
 Gilfi Module - Hash Generator & Identifier
-Uses hash_lib from src/backend/hash-module.
+Uses backend API via api_client instead of direct imports.
 """
 
 from ui.toolpage import ToolPage
-from hash_lib.hash_core.hasher import Hasher
-from hash_lib.hash_identifier.identifier import HashIdentifier
-
-_hasher = Hasher()
-_identifier = HashIdentifier()
+import api_client
 
 
 def create_page():
@@ -44,33 +40,46 @@ def run(page):
 def _run_hash(page, text, algo):
     page.set_status("Computing ...")
     try:
-        result = _hasher.hash(text, algo)
+        # Use API client instead of direct import
+        result = api_client.hash_generate(text, algo)
+        
         page.append_output(f"Input:     {text}")
         page.append_output(f"Algorithm: {algo.upper()}")
         page.append_output("─" * 40)
-        page.append_output(f"Hash: {result}")
-        page.set_status(f"Done - {algo.upper()}")
-    except ValueError:
-        page.append_output(f"[ERROR] Unsupported algorithm: '{algo}'")
-        page.set_status("Unknown algorithm", error=True)
+        page.append_output(f"Hash:      {result}")
+        page.set_status("Done")
+    except ConnectionError as e:
+        page.set_status("Backend not available", error=True)
+        page.append_output(str(e))
+        page.append_output("\nMake sure the backend container is running:")
+        page.append_output("  ./backend-docker.sh start")
     except Exception as e:
-        page.append_output(f"[ERROR] {e}")
         page.set_status("Error", error=True)
+        page.append_output(f"Error: {str(e)}")
 
 
 def _run_identify(page, hash_value):
     page.set_status("Identifying ...")
-    results = _identifier.identify(hash_value)
-
-    page.append_output(f"Hash:   {hash_value}")
-    page.append_output(f"Length: {len(hash_value.strip())} chars")
-    page.append_output("─" * 40)
-
-    if results:
-        page.append_output("Possible algorithms:")
-        for r in results:
-            page.append_output(f"  - {r}")
-    else:
-        page.append_output("No matching algorithm found.")
-
-    page.set_status("Done")
+    try:
+        # Use API client instead of direct import
+        possible_types = api_client.hash_identify(hash_value)
+        
+        page.append_output(f"Hash:      {hash_value}")
+        page.append_output("─" * 40)
+        
+        if possible_types:
+            page.append_output("Possible hash types:")
+            for hash_type in possible_types:
+                page.append_output(f"  • {hash_type}")
+        else:
+            page.append_output("Could not identify hash type")
+        
+        page.set_status("Done")
+    except ConnectionError as e:
+        page.set_status("Backend not available", error=True)
+        page.append_output(str(e))
+        page.append_output("\nMake sure the backend container is running:")
+        page.append_output("  ./backend-docker.sh start")
+    except Exception as e:
+        page.set_status("Error", error=True)
+        page.append_output(f"Error: {str(e)}")
