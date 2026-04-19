@@ -1,42 +1,16 @@
 """
 Gilfi Module - RSA Encryption
-Calls the C binary from src/backend/rsa-module via subprocess.
-Auto-compiles on first run. Uses QThread to keep the GUI responsive.
+Uses backend API via api_client instead of calling C binary directly.
+Uses QThread to keep the GUI responsive.
 """
-
-import os
-import sys
-import subprocess
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from ui.toolpage import ToolPage
-
-_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-_RSA_SRC = os.path.join(_MODULE_DIR, "..", "..", "backend", "rsa-module", "rsa-module.c")
-_BIN_NAME = "rsa-module.exe" if sys.platform == "win32" else "rsa-module"
-_RSA_BIN = os.path.join(_MODULE_DIR, "..", "..", "backend", "rsa-module", _BIN_NAME)
-
-
-def _ensure_compiled():
-    if os.path.isfile(_RSA_BIN):
-        return True, ""
-    if not os.path.isfile(_RSA_SRC):
-        return False, f"C source not found: {_RSA_SRC}"
-
-    try:
-        result = subprocess.run(
-            ["gcc", _RSA_SRC, "-o", _RSA_BIN],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            return False, f"Compilation failed:\n{result.stderr}"
-        return True, ""
-    except FileNotFoundError:
-        return False, "gcc not found! Please install gcc."
+import api_client
 
 
 class RSAWorker(QThread):
-    """runs the C binary in a background thread"""
+    """Calls the backend API in a background thread"""
     output_ready = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
     finished_ok = pyqtSignal()
@@ -47,19 +21,43 @@ class RSAWorker(QThread):
 
     def run(self):
         try:
-            result = subprocess.run(
-                [_RSA_BIN, self.plaintext],
-                capture_output=True, text=True, timeout=30
-            )
-            if result.returncode != 0:
-                self.error_occurred.emit(result.stderr.strip())
-                return
-
-            self.output_ready.emit(result.stdout.strip())
-            self.finished_ok.emit()
-
-        except subprocess.TimeoutExpired:
-            self.error_occurred.emit("Timeout")
+            # Call backend API
+            result = api_client.rsa_encrypt(int(self.plaintext))
+            
+            if result.get('success'):
+                # Format output similar to C binary
+                output_lines = []
+                output_lines.append("--- RSA Key Generation ---")
+                
+                # Extract p, q, n from output if available
+                if 'output' in result:
+                    for line in result['output'].split('\n'):
+                        if any(x in line for x in ['p =', 'q =', 'n =', 'phi =']):
+                            output_lines.append(line)
+                
+                output_lines.append("-" * 26)
+                output_lines.append("")
+                
+                if 'public_key' in result:
+                    output_lines.append(f"Public Key (e, n) = {result['public_key']}")
+                if 'private_key' in result:
+                    output_lines.append(f"Private Key (d, n) = {result['private_key']}")
+                
+                output_lines.append("")
+                output_lines.append(f"Original message (M) = {self.plaintext}")
+                
+                if 'ciphertext' in result:
+                    output_lines.append(f"Ciphertext (C) = {result['ciphertext']}")
+                if 'decrypted' in result:
+                    output_lines.append(f"Decrypted message (M') = {result['decrypted']}")
+                
+                self.output_ready.emit('\n'.join(output_lines))
+                self.finished_ok.emit()
+            else:
+                self.error_occurred.emit(result.get('error', 'Unknown error'))
+                
+        except ConnectionError as e:
+            self.error_occurred.emit(f"Backend not available: {str(e)}")
         except Exception as e:
             self.error_occurred.emit(str(e))
 
@@ -98,13 +96,7 @@ def run(page):
         return
 
     page.clear_output()
-    page.set_status("Compiling / Starting ...")
-
-    ok, err = _ensure_compiled()
-    if not ok:
-        page.append_output(f"[ERROR] {err}")
-        page.set_status("Error", error=True)
-        return
+    page.set_status("Encrypting via backend API ...")
 
     page.btn_run.setEnabled(False)
 
@@ -114,10 +106,16 @@ def run(page):
         lambda out: [page.append_output(line) for line in out.splitlines()]
     )
     _worker.error_occurred.connect(
-        lambda err: (page.append_output(f"[ERROR] {err}"),
-                     page.set_status("Error", error=True))
+        lambda err: (
+            page.append_output(f"[ERROR] {err}"),
+            page.append_output("\nMake sure the backend container is running:"),
+            page.append_output("  ./backend-docker.sh start"),
+            page.set_status("Error", error=True)
+        )
     )
     _worker.finished.connect(lambda: page.btn_run.setEnabled(True))
     _worker.finished_ok.connect(lambda: page.set_status("Done"))
 
     _worker.start()
+
+# Made with Bob
