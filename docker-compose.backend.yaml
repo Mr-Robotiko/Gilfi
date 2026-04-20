@@ -9,9 +9,9 @@ services:
       - FLASK_APP=api_server.py
     volumes:
       # Mount data directory for wordlists and assets
-      - ./data:/app/data
+      - ./data:/app/data:z
       # Mount backend source for development
-      - ./src/backend:/app/backend
+      - ./src/backend:/app/backend:z
     stdin_open: true
     tty: true
     # Use bridge network instead of host to avoid permission issues
