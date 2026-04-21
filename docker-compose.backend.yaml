@@ -16,7 +16,7 @@ services:
     tty: true
     # Use bridge network instead of host to avoid permission issues
     ports:
-      - "11434:11434"  # Ollama API port
+      - "11436:11434"  # Ollama API port (external:internal) - Docker uses 11436, local Ollama uses 11435
       - "8000:8000"    # Backend API port
     # Start API server after entrypoint setup
     command: python /app/backend/api_server.py
