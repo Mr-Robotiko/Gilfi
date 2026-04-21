@@ -167,9 +167,13 @@ class ChatWidget(QWidget):
 
     def start_ollama(self):
         """Start Ollama server on widget initialization (in background thread)"""
+        import os
+        ollama_port = os.environ.get('OLLAMA_HOST', '127.0.0.1:11435').split(':')[-1]
+        
         self.chat_display.append(
             "<span style='color:#555570;'>Starting Ollama server...</span><br>"
-            "<span style='color:#555570;'>This may take 10-15 seconds on first start.</span>"
+            "<span style='color:#555570;'>This may take 10-15 seconds on first start.</span><br>"
+            f"<span style='color:#555570;'>Port: {ollama_port}</span>"
         )
         
         # Start Ollama in background thread to avoid blocking UI
@@ -194,7 +198,12 @@ class ChatWidget(QWidget):
             self.status_label.setStyleSheet("color: #f06b78; font-size: 10px;")
             self.chat_display.append(
                 f"<span style='color:#f06b78;'>✗ Failed to start Ollama:</span><br>"
-                f"<span style='color:#555570;'>{message}</span>"
+                f"<span style='color:#555570;'>{message}</span><br><br>"
+                "<span style='color:#555570;'><b>Troubleshooting:</b></span><br>"
+                "<span style='color:#555570;'>1. Check if port 11435 is available</span><br>"
+                "<span style='color:#555570;'>2. Ensure Ollama binary has execute permissions</span><br>"
+                "<span style='color:#555570;'>3. Check system resources (RAM/CPU)</span><br>"
+                "<span style='color:#555570;'>4. Try restarting the application</span>"
             )
 
     def send_message(self):
