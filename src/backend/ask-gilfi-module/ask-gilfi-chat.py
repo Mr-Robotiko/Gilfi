@@ -40,6 +40,11 @@ if platform.system() != "Windows":
 env = os.environ.copy()
 env["OLLAMA_MODELS"] = model_dir
 
+# Check if custom OLLAMA_HOST is set (for avoiding port conflicts)
+if "OLLAMA_HOST" in os.environ:
+    env["OLLAMA_HOST"] = os.environ["OLLAMA_HOST"]
+    print(f"Using custom OLLAMA_HOST: {env['OLLAMA_HOST']}")
+
 print(f"Using Ollama binary: {ollama_bin}")
 print(f"Models directory: {model_dir}")
 
@@ -52,14 +57,42 @@ def start_gilfi():
         stderr = subprocess.STDOUT
     )
 
-    time.sleep(10)
-
-    print(f"Server läuft mit PID: {ollama_process.pid}")
+    # Wait for Ollama to be ready (with timeout)
+    print(f"Waiting for Ollama server to start (PID: {ollama_process.pid})...")
+    
+    # Get the port from OLLAMA_HOST or use default
+    ollama_host = env.get('OLLAMA_HOST', 'localhost:11434')
+    if '://' in ollama_host:
+        ollama_host = ollama_host.split('://')[-1]
+    
+    max_wait = 30  # seconds
+    wait_interval = 2  # seconds
+    elapsed = 0
+    
+    while elapsed < max_wait:
+        try:
+            response = requests.get(f"http://{ollama_host}/api/tags", timeout=1)
+            if response.status_code == 200:
+                print(f"✓ Ollama server ready after {elapsed} seconds")
+                return ollama_process
+        except:
+            pass
+        
+        time.sleep(wait_interval)
+        elapsed += wait_interval
+        print(f"  Still waiting... ({elapsed}s)")
+    
+    print(f"⚠ Warning: Ollama may not be fully ready yet")
     return ollama_process
 
 
 def ask_gilfi(prompt):
-    url = "http://localhost:11434/api/generate"
+    # Use custom port if OLLAMA_HOST is set, otherwise use default 11434
+    ollama_host = os.environ.get('OLLAMA_HOST', 'localhost:11434')
+    # Extract just the host:port, remove any protocol prefix
+    if '://' in ollama_host:
+        ollama_host = ollama_host.split('://')[-1]
+    url = f"http://{ollama_host}/api/generate"
 
     payload = {
         "model": "ask-gilfi",
@@ -119,3 +152,4 @@ if __name__ == "__main__":
 
     finally:
         ollama_handle.terminate()
+
