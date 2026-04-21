@@ -13,6 +13,13 @@ Gilfi is a comprehensive security and network analysis toolkit with an AI-powere
     - [Deployment Options](#deployment-options)
   - [Project Structure](#project-structure)
   - [Prerequisites](#prerequisites)
+    - [Required Software](#required-software)
+      - [1. Python 3.8 or Higher](#1-python-38-or-higher)
+      - [2. Container Runtime (choose one)](#2-container-runtime-choose-one)
+      - [3. Python Virtual Environment (Recommended)](#3-python-virtual-environment-recommended)
+    - [Python Dependencies](#python-dependencies)
+    - [System Requirements](#system-requirements)
+    - [Port Requirements](#port-requirements)
   - [Quick Start](#quick-start)
     - [Option 1: Using Docker (Recommended)](#option-1-using-docker-recommended)
     - [Option 2: Manual Setup](#option-2-manual-setup)
@@ -140,9 +147,48 @@ Gilfi/
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- Docker and Docker Compose (for backend deployment)
-- pip (Python package manager)
+### Required Software
+
+#### 1. Python 3.8 or Higher
+- **macOS**: `brew install python3`
+- **Linux (Ubuntu/Debian)**: `sudo apt install python3 python3-pip python3-venv`
+- **Windows**: Download from [python.org](https://www.python.org/downloads/)
+
+#### 2. Container Runtime (choose one)
+**Docker (Recommended)**:
+- **macOS**: `brew install --cask docker` or download [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- **Linux**: `sudo apt install docker.io docker-compose`
+- **Windows**: Download [Docker Desktop](https://www.docker.com/products/docker-desktop)
+
+**OR Podman**:
+- **macOS**: `brew install podman podman-compose`
+- **Linux**: `sudo apt install podman podman-compose`
+- **Windows**: Download [Podman Desktop](https://podman.io/getting-started/installation)
+
+#### 3. Python Virtual Environment (Recommended)
+```bash
+python3 -m venv gilfi
+source gilfi/bin/activate  # Linux/Mac
+# gilfi\Scripts\activate   # Windows
+```
+
+### Python Dependencies
+The following packages will be installed via `requirements.txt`:
+- PyQt6==6.11.0 (GUI Framework)
+- pyqt6_sip==13.11.1 (PyQt6 Support)
+- Requests==2.33.1 (HTTP Client)
+
+### System Requirements
+- **RAM**: Minimum 4GB (8GB recommended for AI chatbot)
+- **Disk Space**: ~2GB for Ollama models
+- **OS**: Linux, macOS, or Windows
+
+### Port Requirements
+The following ports must be available:
+- **8000**: Backend API Server
+- **11434**: System Ollama (if installed separately)
+- **11435**: Local Ollama (Frontend)
+- **11436**: Docker Ollama (Backend)
 
 ## Quick Start
 

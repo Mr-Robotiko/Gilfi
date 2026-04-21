@@ -14,12 +14,53 @@ echo ""
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Function to print installation instructions
+print_install_instructions() {
+    echo ""
+    echo -e "${BLUE}=========================================="
+    echo "   Installation Instructions"
+    echo "==========================================${NC}"
+    echo ""
+    echo "Please install the following prerequisites:"
+    echo ""
+    echo -e "${YELLOW}1. Python 3.8 or higher:${NC}"
+    echo "   • macOS:   brew install python3"
+    echo "   • Linux:   sudo apt install python3 python3-pip python3-venv"
+    echo "   • Windows: Download from https://www.python.org/downloads/"
+    echo ""
+    echo -e "${YELLOW}2. Container Runtime (Docker or Podman):${NC}"
+    echo "   Docker (Recommended):"
+    echo "   • macOS:   brew install --cask docker"
+    echo "   • Linux:   sudo apt install docker.io docker-compose"
+    echo "   • Windows: Download from https://www.docker.com/products/docker-desktop"
+    echo ""
+    echo "   OR Podman:"
+    echo "   • macOS:   brew install podman podman-compose"
+    echo "   • Linux:   sudo apt install podman podman-compose"
+    echo "   • Windows: Download from https://podman.io/getting-started/installation"
+    echo ""
+    echo -e "${YELLOW}3. System Requirements:${NC}"
+    echo "   • RAM: Minimum 4GB (8GB recommended for AI chatbot)"
+    echo "   • Disk: ~2GB for Ollama models"
+    echo ""
+    echo -e "${YELLOW}4. Port Requirements:${NC}"
+    echo "   The following ports must be available:"
+    echo "   • 8000:  Backend API Server"
+    echo "   • 11434: System Ollama (if installed)"
+    echo "   • 11435: Local Ollama (Frontend)"
+    echo "   • 11436: Docker Ollama (Backend)"
+    echo ""
+    echo "After installing prerequisites, run this script again."
+    echo ""
+}
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}Error: Python 3 is not installed!${NC}"
-    echo "Please install Python 3.8 or higher and try again."
+    print_install_instructions
     exit 1
 fi
 
