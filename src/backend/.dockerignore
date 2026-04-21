@@ -40,3 +40,4 @@ test_*.py
 # Compiled RSA module (will be compiled in container)
 rsa-module/a.out
 rsa-module/rsa-module
+models/
