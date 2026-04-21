@@ -58,6 +58,96 @@ else
     print_error "Ollama binary not found at $OLLAMA_BINARY"
 fi
 
+# Set up Ollama model (download granite4 and create ask-gilfi)
+print_info "Checking Ollama model setup..."
+
+MODEL_MANIFEST="/app/backend/ask-gilfi-module/models/manifests/registry.ollama.ai/library/ask-gilfi/latest"
+
+if [ ! -f "$MODEL_MANIFEST" ]; then
+    print_info "ask-gilfi model not found - attempting setup..."
+    
+    # Test if Ollama binary works (architecture check)
+    if $OLLAMA_BINARY --version > /dev/null 2>&1; then
+        print_info "Setting up ask-gilfi model (first-time setup)..."
+        print_info "This may take a few minutes to download granite4:350m..."
+        
+        # Start Ollama server in background
+        $OLLAMA_BINARY serve > /tmp/ollama.log 2>&1 &
+        OLLAMA_PID=$!
+        
+        # Wait for Ollama to be ready
+        print_info "Waiting for Ollama server to start..."
+        sleep 5
+        
+        # Check if Ollama is responding
+        OLLAMA_READY=false
+        for i in {1..30}; do
+            if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+                print_success "Ollama server is ready"
+                OLLAMA_READY=true
+                break
+            fi
+            sleep 1
+        done
+        
+        if [ "$OLLAMA_READY" = true ]; then
+            # Pull granite4:350m model
+            print_info "Downloading granite4:350m model..."
+            if $OLLAMA_BINARY pull granite4:350m; then
+                print_success "granite4:350m downloaded"
+            else
+                print_error "Failed to download granite4:350m"
+            fi
+            
+            # Create ask-gilfi model from Modelfile
+            print_info "Creating ask-gilfi model..."
+            if $OLLAMA_BINARY create ask-gilfi -f /app/backend/ask-gilfi-module/Modelfile; then
+                print_success "ask-gilfi model created"
+            else
+                print_error "Failed to create ask-gilfi model"
+            fi
+            
+            # Verify model
+            print_info "Verifying model installation..."
+            $OLLAMA_BINARY list
+        fi
+        
+        # Stop Ollama server
+        print_info "Stopping temporary Ollama server..."
+        kill $OLLAMA_PID 2>/dev/null || true
+        wait $OLLAMA_PID 2>/dev/null || true
+        
+        print_success "Ollama model setup complete!"
+    else
+        print_error "Ollama binary not compatible with container architecture"
+        print_info "Note: ask-gilfi chatbot requires manual setup on host system"
+        print_info "See documentation for local setup instructions"
+    fi
+else
+    print_success "ask-gilfi model already configured"
+fi
+
+# Extract rockyou.7z if not already extracted
+print_info "Checking rockyou wordlist..."
+
+ROCKYOU_ARCHIVE="/app/data/wordlist/rockyou.7z"
+ROCKYOU_TXT="/app/data/wordlist/rockyou.txt"
+
+if [ -f "$ROCKYOU_ARCHIVE" ]; then
+    if [ ! -f "$ROCKYOU_TXT" ]; then
+        print_info "Extracting rockyou.7z wordlist..."
+        if 7z x "$ROCKYOU_ARCHIVE" -o/app/data/wordlist/ -y > /dev/null 2>&1; then
+            print_success "rockyou.txt extracted successfully"
+        else
+            print_error "Failed to extract rockyou.7z"
+        fi
+    else
+        print_success "rockyou.txt already extracted"
+    fi
+else
+    print_error "rockyou.7z not found at $ROCKYOU_ARCHIVE"
+fi
+
 # Verify Python packages
 print_info "Verifying Python packages..."
 

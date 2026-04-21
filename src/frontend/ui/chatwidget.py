@@ -53,6 +53,60 @@ def start_ollama_server():
         # Use the start_gilfi function from ask-gilfi-chat module
         # (OLLAMA_HOST was set before module import)
         _ollama_process = start_gilfi()
+        
+        # Check if ask-gilfi model exists, create it if not
+        import subprocess
+        import time
+        
+        # Wait a moment for Ollama to be fully ready
+        time.sleep(2)
+        
+        # Get the Ollama binary path
+        ollama_bin = ask_gilfi_chat.get_ollama_binary()
+        
+        # Check if model exists
+        try:
+            result = subprocess.run(
+                [ollama_bin, "list"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                env=os.environ.copy()
+            )
+            
+            if "ask-gilfi" not in result.stdout:
+                # Model doesn't exist, create it
+                print("ask-gilfi model not found, creating it...")
+                
+                # Get the Modelfile path
+                askgilfi_file = ask_gilfi_chat.__file__
+                if askgilfi_file is None:
+                    return False, "Could not locate ask-gilfi module"
+                askgilfi_dir = os.path.dirname(askgilfi_file)
+                modelfile_path = os.path.join(askgilfi_dir, "Modelfile")
+                
+                # Create the model
+                create_result = subprocess.run(
+                    [ollama_bin, "create", "ask-gilfi", "-f", modelfile_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 minutes for model download
+                    env=os.environ.copy()
+                )
+                
+                if create_result.returncode == 0:
+                    print("✓ ask-gilfi model created successfully")
+                else:
+                    print(f"⚠ Failed to create model: {create_result.stderr}")
+                    return False, f"Failed to create ask-gilfi model: {create_result.stderr}"
+            else:
+                print("✓ ask-gilfi model already exists")
+                
+        except subprocess.TimeoutExpired:
+            print("⚠ Model check/creation timed out")
+        except Exception as e:
+            print(f"⚠ Error checking/creating model: {e}")
+        
         return True, f"Ollama started on port {OLLAMA_PORT} (PID: {_ollama_process.pid})"
     except Exception as e:
         return False, f"Failed to start Ollama: {str(e)}"
@@ -244,7 +298,7 @@ class ChatWidget(QWidget):
         self.btn_send.setEnabled(True)
         self.chat_display.append("")
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0):
         """Clean up when widget is closed"""
         stop_ollama_server()
-        super().closeEvent(event)
+        super().closeEvent(a0)
