@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-from modules import network_scanner, port_scanner, rsa_encryption, hash_module, hash_crack_module
+from modules import network_scanner, port_scanner, rsa_encryption, hash_module, hash_crack_module, arcade
 from ui.chatwidget import ChatWidget
 
 
@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(self.nav_list, stretch=1)
 
         # chatbot toggle at the bottom
-        self.chat_toggle = QPushButton("💬  Ask Gilfi")
+        self.chat_toggle = QPushButton("Ask Gilfi")
         self.chat_toggle.setObjectName("chatToggle")
         self.chat_toggle.setCheckable(True)
         self.chat_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
             ("RSA Encryption",   rsa_encryption.create_page()),
             ("Hash Module",      hash_module.create_page()),
             ("Hash Crack Module", hash_crack_module.create_page()),
+            ("Arcade",           arcade.create_page()),
         ]
 
         for name, page in tools:
