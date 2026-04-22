@@ -136,10 +136,23 @@ ROCKYOU_TXT="/app/data/wordlist/rockyou.txt"
 if [ -f "$ROCKYOU_ARCHIVE" ]; then
     if [ ! -f "$ROCKYOU_TXT" ]; then
         print_info "Extracting rockyou.7z wordlist..."
-        if 7z x "$ROCKYOU_ARCHIVE" -o/app/data/wordlist/ -y > /dev/null 2>&1; then
-            print_success "rockyou.txt extracted successfully"
+        
+        # Try different 7z commands (compatibility for different distros)
+        if command -v 7z &> /dev/null; then
+            if 7z x "$ROCKYOU_ARCHIVE" -o/app/data/wordlist/ -y; then
+                print_success "rockyou.txt extracted successfully"
+            else
+                print_error "Failed to extract rockyou.7z with 7z"
+            fi
+        elif command -v 7za &> /dev/null; then
+            if 7za x "$ROCKYOU_ARCHIVE" -o/app/data/wordlist/ -y; then
+                print_success "rockyou.txt extracted successfully"
+            else
+                print_error "Failed to extract rockyou.7z with 7za"
+            fi
         else
-            print_error "Failed to extract rockyou.7z"
+            print_error "No 7z extraction tool found (tried: 7z, 7za)"
+            print_error "Please install p7zip or p7zip-full package"
         fi
     else
         print_success "rockyou.txt already extracted"
