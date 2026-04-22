@@ -52,6 +52,28 @@ QPushButton:disabled {
 """
 
 
+LEVEL_BTN_STYLE = """
+QPushButton {
+    background: #16213e;
+    color: #8a8aa0;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: #1a5276;
+    color: #ffffff;
+}
+QPushButton:checked {
+    background: #0f3460;
+    color: #ffffff;
+    border-color: #53a8d8;
+}
+"""
+
+
 def _send_to_module(widget, module_name, field_values, auto_run=False):
     """
     Walk up to the MainWindow, switch to the target tool page, prefill its
@@ -779,6 +801,22 @@ class FactorizeGame(QWidget):
         info.setWordWrap(True)
         layout.addWidget(info)
 
+        # level picker - lets the user stay on any difficulty they want
+        picker_group = QGroupBox("Pick Level")
+        pg = QHBoxLayout(picker_group)
+        pg.setSpacing(6)
+        self.level_buttons = []
+        picker_labels = ["Level 1", "Level 2", "Level 3", "Level 4", "BOSS"]
+        for i, lbl in enumerate(picker_labels):
+            btn = QPushButton(lbl)
+            btn.setStyleSheet(LEVEL_BTN_STYLE)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setCheckable(True)
+            btn.clicked.connect(lambda checked, idx=i: self._pick_level(idx))
+            pg.addWidget(btn)
+            self.level_buttons.append(btn)
+        layout.addWidget(picker_group)
+
         # N display
         n_group = QGroupBox("N = p * q")
         nl = QVBoxLayout(n_group)
@@ -876,6 +914,7 @@ class FactorizeGame(QWidget):
         self.timer_label.setText(f"{self.time_left}s")
         self.timer_label.setStyleSheet("color: #53a8d8;")
         self.status_label.setText("")
+        self._update_level_buttons()
         self.timer.start(1000)
 
     def _tick(self):
@@ -888,7 +927,8 @@ class FactorizeGame(QWidget):
             self.status_label.setText(f"Time up! It was {self.p} * {self.q} = {self.n}")
             self.status_label.setStyleSheet("color: #f06b78;")
             self.submit_btn.setEnabled(False)
-            QTimer.singleShot(2200, self._advance)
+            # stay on the same level, just load a new puzzle
+            QTimer.singleShot(2200, self._new_level)
 
     def _check_answer(self):
         try:
@@ -909,16 +949,35 @@ class FactorizeGame(QWidget):
             )
             self.status_label.setStyleSheet("color: #4ade80; font-weight: bold;")
             self.submit_btn.setEnabled(False)
-            QTimer.singleShot(1800, self._advance)
+            # stay on the same level, just load a new puzzle
+            QTimer.singleShot(1800, self._new_level)
         else:
             self.status_label.setText(
                 f"{p_in} * {q_in} = {p_in * q_in}, not {self.n}. Try again!"
             )
             self.status_label.setStyleSheet("color: #f06b78;")
 
-    def _advance(self):
-        self.level += 1
+    def _pick_level(self, idx):
+        """User clicked a level button. Switch to that level immediately."""
+        self.timer.stop()
+        self.level = idx
+        # reset submit button to normal state - the boss path will override this
+        # inside _show_boss if needed
+        self.submit_btn.setText("Check")
+        self.submit_btn.setEnabled(True)
+        self.p_input.setEnabled(True)
+        self.q_input.setEnabled(True)
+        try:
+            self.submit_btn.clicked.disconnect()
+        except TypeError:
+            pass
+        self.submit_btn.clicked.connect(self._check_answer)
         self._new_level()
+
+    def _update_level_buttons(self):
+        """Highlight the currently active level in the picker."""
+        for i, btn in enumerate(self.level_buttons):
+            btn.setChecked(i == self.level)
 
     def _show_boss(self):
         """Final level: a huge number that is practically unfactorable by hand."""
@@ -932,6 +991,7 @@ class FactorizeGame(QWidget):
         self.level_label.setText("Level 5/5 - BOSS")
         self.timer_label.setText("inf")
         self.timer_label.setStyleSheet("color: #f06b78; font-weight: bold;")
+        self._update_level_buttons()
         self.status_label.setText(
             "This N has 20 digits. Real RSA uses 600+. Good luck trying - "
             "but this is exactly why RSA is secure. Click 'Give Up' for the answer."
