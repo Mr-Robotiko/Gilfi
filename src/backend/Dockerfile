@@ -4,11 +4,13 @@
 FROM python:3.11-slim
 
 # Install system dependencies for compilation, runtime, and 7zip extraction
+# Note: p7zip-full provides both 7z and 7za commands for maximum compatibility
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     make \
     p7zip-full \
+    p7zip \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
