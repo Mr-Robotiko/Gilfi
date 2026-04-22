@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from typing import Optional, List
 
 from hash_lib.hash_core.hasher import Hasher
@@ -6,8 +7,15 @@ from hash_lib.hash_identifier.identifier import HashIdentifier
 
 
 class Cracker:
-    def __init__(self, db_path = "hash_cache.db"):
-        self.db_path = db_path
+    def __init__(self, db_path = None):
+        # Use persistent path in /app/data if no path specified
+        if db_path is None:
+            # Create data directory if it doesn't exist
+            data_dir = "/app/data/cache"
+            os.makedirs(data_dir, exist_ok=True)
+            self.db_path = os.path.join(data_dir, "hash_cache.db")
+        else:
+            self.db_path = db_path
         self._setup_db()
 
     def _setup_db(self) -> None:
