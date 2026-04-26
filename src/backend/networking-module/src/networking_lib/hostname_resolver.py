@@ -1,6 +1,4 @@
-import socket
-
-class Resolver(s: socket):
+class Resolver(s):
     def resolve_host(self, host: str):
         try:
             ip_address = s.getaddrinfo(host, 80)
