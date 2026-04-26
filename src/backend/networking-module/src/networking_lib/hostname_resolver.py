@@ -1,9 +1,14 @@
-class Resolver(s):
+import socket
+
+class Resolver(object):
+    def __init__(self):
+        self.s = s
+
     def resolve_host(self, host: str):
         try:
-            ip_address = s.getaddrinfo(host, 80)
+            ip_address = socket.gethostbyname(host)
             return ip_address
-        except shared_info.socket.gaierror:
+        except socket.gaierror:
             return "Failed"
     
     def resolve_hosts(self, hosts: list):

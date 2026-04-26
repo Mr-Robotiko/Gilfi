@@ -10,14 +10,14 @@ from hostname_resolver import Resolver
 class Info():
     # Private
     __hostname_regex = "[a-zA-Z.]*"
-    __r = resolver(s)
+    __r = Resolver()
 
     # Public
-    ip_target = ""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ipv4_target = ""
 
     def set_ip(self, ip):
-        if re.search(hostname_regex, ip):
-            self.ip_target = __r.resolve_host(ip)
+        if re.search(self.__hostname_regex, ip):
+            self.ipv4_target = self.__r.resolve_host(ip)
         else:
-            self.ip_target = ip
+            self.ipv4_target = ip
