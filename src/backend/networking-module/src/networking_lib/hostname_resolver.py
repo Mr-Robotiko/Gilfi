@@ -2,7 +2,7 @@ import socket
 
 class Resolver(object):
     def __init__(self):
-        self.s = s
+        pass
 
     def resolve_host(self, host: str):
         try:

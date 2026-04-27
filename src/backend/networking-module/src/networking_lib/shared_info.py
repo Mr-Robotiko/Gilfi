@@ -9,12 +9,15 @@ from hostname_resolver import Resolver
 
 class Info():
     # Private
-    __hostname_regex = "[a-zA-Z.]*"
+    __hostname_regex = "[a-zA-Z]+"
     __r = Resolver()
 
     # Public
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ipv4_target = ""
+
+    def __init__(self):
+        pass
 
     def set_ip(self, ip):
         if re.search(self.__hostname_regex, ip):
