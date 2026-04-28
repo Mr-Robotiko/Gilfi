@@ -37,6 +37,26 @@ hasher = Hasher()
 identifier = HashIdentifier()
 cracker = Cracker()
 
+# Global Ollama process for reuse
+_ollama_process = None
+
+def get_ollama_process():
+    """Get or start Ollama process (singleton pattern)"""
+    global _ollama_process
+    
+    # Check if process exists and is still running
+    if _ollama_process is not None:
+        try:
+            # Check if process is still alive
+            if _ollama_process.poll() is None:
+                return _ollama_process
+        except:
+            pass
+    
+    # Start new process
+    _ollama_process = start_gilfi()
+    return _ollama_process
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -215,21 +235,23 @@ def askgilfi_query():
         if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
         
-        # Start Ollama server
-        ollama_process = start_gilfi()
+        # Get or start Ollama server (reuses existing process)
+        ollama_process = get_ollama_process()
         
-        try:
-            # Query the model
-            response = ask_gilfi(prompt)
-            
+        # Query the model (don't terminate process - keep it running)
+        response = ask_gilfi(prompt)
+        
+        if response is None:
             return jsonify({
-                'success': True,
-                'prompt': prompt,
-                'response': response
-            })
-        finally:
-            # Clean up
-            ollama_process.terminate()
+                'success': False,
+                'error': 'Ollama server not responding'
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'prompt': prompt,
+            'response': response
+        })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

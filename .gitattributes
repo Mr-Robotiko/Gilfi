@@ -1,3 +1,0 @@
-# Add models
-**/bin/* filter=lfs diff=lfs merge=lfs -text
-**/models/blobs/* filter=lfs diff=lfs merge=lfs -text

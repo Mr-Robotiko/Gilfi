@@ -3,11 +3,15 @@
 
 FROM python:3.11-slim
 
-# Install system dependencies for compilation and runtime
+# Install system dependencies for compilation, runtime, and 7zip extraction
+# Note: p7zip-full provides both 7z and 7za commands for maximum compatibility
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     make \
+    p7zip-full \
+    p7zip \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Environment setup
@@ -24,11 +28,14 @@ RUN gcc /app/backend/rsa-module/rsa-module.c -o /app/backend/rsa-module/rsa-modu
 # Set up Ollama for ask-gilfi module
 RUN chmod +x /app/backend/ask-gilfi-module/bin/linux/ollama
 
-# If using volume mounts in development, the RSA binary may need recompilation
-# Run: docker exec gilfi_backend gcc /app/backend/rsa-module/rsa-module.c -o /app/backend/rsa-module/rsa-module
-
 # Set environment variable for Ollama models directory
 ENV OLLAMA_MODELS=/app/backend/ask-gilfi-module/models
+
+# Note: Ollama model setup is done at runtime in entrypoint.sh
+# This avoids architecture issues during build and makes the container Git LFS independent
+
+# If using volume mounts in development, the RSA binary may need recompilation
+# Run: docker exec gilfi_backend gcc /app/backend/rsa-module/rsa-module.c -o /app/backend/rsa-module/rsa-module
 
 # Expose port for API Backend Server
 EXPOSE 8000
