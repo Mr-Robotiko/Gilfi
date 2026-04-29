@@ -13,6 +13,8 @@ from hash_lib.hash_core.hasher import Hasher
 from hash_lib.hash_identifier.identifier import HashIdentifier
 from hash_lib.hash_cracker.cracker import Cracker
 
+from networking_lib.shared_info import Info
+
 # Paths
 RSA_BINARY = "/app/backend/rsa-module/rsa-module"
 ASKGILFI_SCRIPT = "/app/backend/ask-gilfi-module/ask-gilfi-chat.py"
