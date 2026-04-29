@@ -67,6 +67,12 @@ else
     print_error "Hash module package not found"
 fi
 
+if python -c "import networking-lib" 2>/dev/null; then
+    print_success "Networking module package installed"
+else
+    print_error "Networking module package not found"
+fi
+
 if python -c "import requests" 2>/dev/null; then
     print_success "Requests package installed"
 else
@@ -83,6 +89,7 @@ echo "  - Architecture: $(uname -m)"
 # Display available modules
 print_info "Available backend modules:"
 echo "  - Hash module: /app/backend/hash-module"
+echo "  - Networking module: /app/backend/networking-module"
 echo "  - RSA module: /app/backend/rsa-module/rsa-module"
 echo "  - Ask-Gilfi: /app/backend/ask-gilfi-module/ask-gilfi-chat.py"
 
