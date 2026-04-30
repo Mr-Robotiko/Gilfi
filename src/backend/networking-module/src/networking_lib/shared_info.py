@@ -1,4 +1,3 @@
-import socket
 import re
 
 from hostname_resolver import Resolver
@@ -13,7 +12,6 @@ class Info():
     __r = Resolver()
 
     # Public
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ipv4_target = ""
 
     def __init__(self):

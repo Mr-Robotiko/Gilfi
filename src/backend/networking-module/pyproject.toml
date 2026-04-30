@@ -7,8 +7,7 @@ name = "networking_lib"
 version = "0.1.0"
 description = "A modular networking library for probing"
 dependencies = [
-    "socket",
-    "re",
+    "sockets",
 ]
 
 [tool.setuptools.packages.find]
