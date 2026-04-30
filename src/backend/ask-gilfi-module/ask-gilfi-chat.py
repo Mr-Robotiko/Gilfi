@@ -37,19 +37,20 @@ if not os.path.exists(ollama_bin):
 if platform.system() != "Windows":
     os.chmod(ollama_bin, 0o755)
 
-env = os.environ.copy()
-env["OLLAMA_MODELS"] = model_dir
-
-# Check if custom OLLAMA_HOST is set (for avoiding port conflicts)
-if "OLLAMA_HOST" in os.environ:
-    env["OLLAMA_HOST"] = os.environ["OLLAMA_HOST"]
-    print(f"Using custom OLLAMA_HOST: {env['OLLAMA_HOST']}")
-
 print(f"Using Ollama binary: {ollama_bin}")
 print(f"Models directory: {model_dir}")
 
 
 def start_gilfi():
+    # Create environment variables INSIDE the function to get current values
+    env = os.environ.copy()
+    env["OLLAMA_MODELS"] = model_dir
+    
+    # Check if custom OLLAMA_HOST is set (for avoiding port conflicts)
+    if "OLLAMA_HOST" in os.environ:
+        env["OLLAMA_HOST"] = os.environ["OLLAMA_HOST"]
+        print(f"Using custom OLLAMA_HOST: {env['OLLAMA_HOST']}")
+    
     ollama_process = subprocess.Popen(
         [ollama_bin, "serve"],
         env = env,
@@ -101,10 +102,25 @@ def ask_gilfi(prompt):
     }
 
     print("\n--- Gilfi denkt nach ---")
+    print(f"Verbinde mit: {url}")
     print("Antwort: ", end = "", flush = True)
 
     try:
-        response = requests.post(url, json = payload, stream = True)
+        # First check if server is reachable
+        try:
+            health_check = requests.get(f"http://{ollama_host}/api/tags", timeout=2)
+            if health_check.status_code != 200:
+                print(f"\n\n[!] FEHLER: Ollama Server antwortet nicht korrekt (Status: {health_check.status_code})")
+                print(f"[!] URL: http://{ollama_host}/api/tags")
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"\n\n[!] FEHLER: Kann Ollama Server nicht erreichen!")
+            print(f"[!] URL: http://{ollama_host}")
+            print(f"[!] Details: {e}")
+            print(f"[!] Stelle sicher, dass Ollama läuft und auf Port {ollama_host.split(':')[-1]} erreichbar ist.")
+            return None
+
+        response = requests.post(url, json = payload, stream = True, timeout=120)
         response.raise_for_status()
 
         full_response = ""
@@ -120,11 +136,31 @@ def ask_gilfi(prompt):
         print("\n")
         return full_response
 
-    except requests.exceptions.ConnectionError:
-        print("\n\n[!] FEHLER: Gilfi ist nicht aktiv! Starte das Tool neu, um diese Funktion nutzen zu können.")
+    except requests.exceptions.ConnectionError as e:
+        print(f"\n\n[!] FEHLER: Verbindung zu Ollama fehlgeschlagen!")
+        print(f"[!] URL: {url}")
+        print(f"[!] Details: {e}")
+        print("[!] Starte das Tool neu oder prüfe, ob Ollama läuft.")
+        return None
+    except requests.exceptions.Timeout:
+        print("\n\n[!] FEHLER: Ollama antwortet nicht (Timeout)")
+        print("[!] Das Modell braucht möglicherweise mehr Zeit zum Laden.")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"\n\n[!] FEHLER: HTTP Fehler von Ollama: {e}")
+        print(f"[!] Status Code: {e.response.status_code if e.response else 'unknown'}")
+        if e.response:
+            print(f"[!] Response: {e.response.text[:200]}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"\n\n[!] FEHLER: Ungültige Antwort von Ollama (JSON Parse Error)")
+        print(f"[!] Details: {e}")
         return None
     except Exception as e:
-        print(f"\n\n[!] FEHLER: {e}")
+        print(f"\n\n[!] FEHLER: Unerwarteter Fehler: {type(e).__name__}")
+        print(f"[!] Details: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
