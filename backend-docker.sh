@@ -5,6 +5,11 @@
 
 set -e
 
+# Detect script directory and change to it
+# This allows the script to be run from anywhere
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 COMPOSE_FILE="docker-compose.backend.yaml"
 CONTAINER_NAME="gilfi_backend"
 

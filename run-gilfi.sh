@@ -5,6 +5,14 @@
 
 set -e  # Exit on error
 
+# Detect script directory and change to it
+# This allows the script to be run from anywhere
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "Working directory: $SCRIPT_DIR"
+echo ""
+
 echo "=========================================="
 echo "   Gilfi - Installation & Run Script"
 echo "=========================================="
