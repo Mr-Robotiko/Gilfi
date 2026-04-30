@@ -1,6 +1,6 @@
 import re
 
-from hostname_resolver import Resolver
+from networking_lib.hostname_resolver import Resolver
 
 #TODO:
 # - Add validate_ip_regex

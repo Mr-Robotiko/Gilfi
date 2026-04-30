@@ -1,4 +1,4 @@
-import shared_info
+import networking_lib.shared_info
 import socket
 
 class Scanner():
