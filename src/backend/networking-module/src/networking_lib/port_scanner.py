@@ -1,6 +1,10 @@
 import networking_lib.shared_info
 import socket
 
+# TODO:
+#   - Detangle functions to use self instead of return
+#   - Use return for error handeling
+
 class Scanner():
     __MAX_PORT_NR = 64738
     __IP = '127.0.0.1'
@@ -11,8 +15,8 @@ class Scanner():
         '''
 
         self.shared_info = shared_info
-        port_range = self.__parse_range(range_input)
-        address_type = self.__parse_address_type(address_type)
+        self.port_range = self.__parse_range(range_input)
+        self.address_type = self.__parse_address_type(address_type)
 
     def __parse_range(self, range_input) -> range:
         '''
@@ -60,13 +64,17 @@ class Scanner():
         print("Please enter a supported address_type [IPV4/IPV6]")
         return 0
 
-    def scan(self) -> list:
+    
+    def __scan(self) -> list:
         '''
         Docstring
         '''
 
         for i in range(__MAX_PORT_NR):
             pass
+
+    def start_scan(self):
+        pass
 
 def tests():
     shared = networking_lib.shared_info.Info()
