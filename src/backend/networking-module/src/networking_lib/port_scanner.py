@@ -1,5 +1,6 @@
 import networking_lib.shared_info
 import socket
+import json
 
 # TODO:
 #   - Detangle functions to use self instead of return
@@ -14,7 +15,7 @@ class Scanner():
         * __ip:                     IP to scan
         * __scanned_ports:          Dictionary of all scanned ports with the key being the ports and the value being 
                                     another dictionary with the key being "UDP" and/or "TCP" and value being their respective status
-                                    __scanned_ports[]
+                                    __scanned_ports[port][]
         
         
     '''
@@ -119,20 +120,34 @@ class Scanner():
             current_protocoll = self.__PROTOCOLL_TRANSLATION[sock.type]
             for port in port_range:
                 status = sock.connect_ex((self.__ip, port))
-                self.__scanned_ports[port] = {current_protocoll: status}
+                if port in self.__scanned_ports:
+                    self.__scanned_ports[port][current_protocoll] = status
+                else:
+                    self.__scanned_ports[port] = {current_protocoll: status}
+
+    def __add_descriptions(self, path):
+        port_range = self.__parse_range(self.range_input)
+        f = open(path)
+        full_file = json.loads(f.read())
+        for port in port_range:
+            if port in self.__scanned_ports and f"{port}" in full_file['ports']:
+                description = full_file['ports'][f"{port}"]
+                # TODO: Handle that better
+                if type(description) == list:
+                    description = description[0]
+                self.__scanned_ports[port]["Description"] = [description['description'], description['status']]
 
     def get_all_ports(self):
         return self.__scanned_ports
 
     def start_scan(self):
         self.__scan()
+        self.__add_descriptions("data/ports/ports.json")
 
 def debug():
     shared = networking_lib.shared_info.Info()
     scanner = Scanner(shared)
     scanner.start_scan()
-    a = scanner.get_all_ports()
-    print(a)
 
 if __name__ == "__main__":
     debug()
