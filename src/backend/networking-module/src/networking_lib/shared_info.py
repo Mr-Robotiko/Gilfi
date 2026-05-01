@@ -12,7 +12,8 @@ class Info():
     __r = Resolver()
 
     # Public
-    ipv4_target = ""
+    ipv4_target = '127.0.0.1'
+    ipv6_target = ''
 
     def __init__(self):
         pass
