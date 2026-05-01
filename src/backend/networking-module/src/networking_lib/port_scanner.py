@@ -88,7 +88,17 @@ class Scanner():
 
         print("Please enter a supported connection_type [TCP/UDP/BOTH]")
         return -1
-    
+
+    def socket_factory(self):
+        '''
+        Generator for opening sockets.
+
+        :return: Generator object to iterate through sockets depending on the scan type (TCP/UDP/BOTH)
+        :rtype: generator
+        '''
+        for protocoll in self.connection_type:
+            yield socket.socket(self.address_family, protocoll)
+
     def __scan(self) -> list:
         '''
         Docstring
@@ -97,7 +107,7 @@ class Scanner():
         for i in range(__MAX_PORT_NR):
             pass
 
-    def get_open_ports():
+    def get_open_ports(self):
         return __open_ports
 
     def start_scan(self):
@@ -106,7 +116,10 @@ class Scanner():
 def tests():
     shared = networking_lib.shared_info.Info()
     scanner = Scanner(shared)
-    print(socket.AF_INET6)
+    sock = scanner.socket_factory()
+    print(type(sock))
+    for i in sock:
+        print(i)
 
 if __name__ == "__main__":
     tests()
