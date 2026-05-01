@@ -4,20 +4,29 @@ import socket
 # TODO:
 #   - Detangle functions to use self instead of return
 #   - Use return for error handeling
-#   - Add get_all_ports
 
 class Scanner():
+    '''
+    Scanner class with following variables and functions:
+    * Private:
+        * __MAX_PORT_NR:            Maximum number of ports
+        * __PROTOCOLL_TRANSLATION:  Dict for looking up used SocketKind names
+        * __ip:                     IP to scan
+        * __scanned_ports:          Dictionary of all scanned ports with the key being the ports and the value being 
+                                    another dictionary with the key being "UDP" and/or "TCP" and value being their respective status
+                                    __scanned_ports[]
+        
+        
+    '''
     __MAX_PORT_NR = 64738
-    __IP = '127.0.0.1'
+    __PROTOCOLL_TRANSLATION = {1: "TCP", 2: "UDP"}
 
     def __init__(self, shared_info: shared_info.Info, range_input=[0], address_family="IPV4", connection_type="BOTH"):
-        '''
-        Docstring
-        '''
-
-        self.__open_ports =  []
+        self.__ip = '127.0.0.1'
+        self.__scanned_ports = {}
         self.shared_info = shared_info
-        self.port_range = self.__parse_range(range_input)
+        self.range_input = range_input
+
         self.address_family = self.__parse_address_type(address_family)
         self.connection_type = self.__parse_connection_type(connection_type)
 
@@ -57,11 +66,11 @@ class Scanner():
         '''
 
         if str.upper(address_family) == "IPV4":
-            self.__IP = self.shared_info.ipv4_target
+            self.__ip = self.shared_info.ipv4_target
             return socket.AF_INET
 
         if str.upper(address_family) == "IPV6":
-            self.__IP = self.shared_info.ipv6_target
+            self.__ip = self.shared_info.ipv6_target
             return socket.AF_INET6
 
         print("Please enter a supported address_family [IPV4/IPV6]")
@@ -89,7 +98,7 @@ class Scanner():
         print("Please enter a supported connection_type [TCP/UDP/BOTH]")
         return -1
 
-    def socket_factory(self):
+    def __socket_factory(self):
         '''
         Generator for opening sockets.
 
@@ -99,27 +108,31 @@ class Scanner():
         for protocoll in self.connection_type:
             yield socket.socket(self.address_family, protocoll)
 
-    def __scan(self) -> list:
+    def __scan(self) -> None:
         '''
-        Docstring
+        Performs scan over the given ip, protocoll/s and port range.
+        Modifies __scanned_ports accordingly.
         '''
 
-        for i in range(__MAX_PORT_NR):
-            pass
+        for sock in self.__socket_factory():
+            port_range = self.__parse_range(self.range_input)
+            current_protocoll = self.__PROTOCOLL_TRANSLATION[sock.type]
+            for port in port_range:
+                status = sock.connect_ex((self.__ip, port))
+                self.__scanned_ports[port] = {current_protocoll: status}
 
-    def get_open_ports(self):
-        return __open_ports
+    def get_all_ports(self):
+        return self.__scanned_ports
 
     def start_scan(self):
-        pass
+        self.__scan()
 
-def tests():
+def debug():
     shared = networking_lib.shared_info.Info()
     scanner = Scanner(shared)
-    sock = scanner.socket_factory()
-    print(type(sock))
-    for i in sock:
-        print(i)
+    scanner.start_scan()
+    a = scanner.get_all_ports()
+    print(a)
 
 if __name__ == "__main__":
-    tests()
+    debug()
