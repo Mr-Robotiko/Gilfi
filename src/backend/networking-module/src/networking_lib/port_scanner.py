@@ -16,8 +16,8 @@ class Scanner():
         * __scanned_ports:          Dictionary of all scanned ports with the key being the ports and the value being 
                                     another dictionary with the key being "UDP" and/or "TCP" and value being their respective status
                                     __scanned_ports[port][]
-        
-        
+        * __shared_info:            Shared info object for accessing shared info between networking modules
+        * __range_input:            List of length 1 or 2 of the ports to be scanned
     '''
     __MAX_PORT_NR = 64738
     __PROTOCOLL_TRANSLATION = {1: "TCP", 2: "UDP"}
@@ -25,11 +25,11 @@ class Scanner():
     def __init__(self, shared_info: shared_info.Info, range_input=[0], address_family="IPV4", connection_type="BOTH"):
         self.__ip = '127.0.0.1'
         self.__scanned_ports = {}
-        self.shared_info = shared_info
-        self.range_input = range_input
+        self.__shared_info = shared_info
+        self.__range_input = range_input
 
-        self.address_family = self.__parse_address_type(address_family)
-        self.connection_type = self.__parse_connection_type(connection_type)
+        self.__address_family = self.__parse_address_type(address_family)
+        self.__connection_type = self.__parse_connection_type(connection_type)
 
     def __parse_range(self, range_input) -> range:
         '''
@@ -67,11 +67,11 @@ class Scanner():
         '''
 
         if str.upper(address_family) == "IPV4":
-            self.__ip = self.shared_info.ipv4_target
+            self.__ip = self.__shared_info.ipv4_target
             return socket.AF_INET
 
         if str.upper(address_family) == "IPV6":
-            self.__ip = self.shared_info.ipv6_target
+            self.__ip = self.__shared_info.ipv6_target
             return socket.AF_INET6
 
         print("Please enter a supported address_family [IPV4/IPV6]")
@@ -99,15 +99,15 @@ class Scanner():
         print("Please enter a supported connection_type [TCP/UDP/BOTH]")
         return -1
 
-    def __socket_factory(self):
+    def __socket_factory(self) -> socket.socket:
         '''
         Generator for opening sockets.
 
         :return: Generator object to iterate through sockets depending on the scan type (TCP/UDP/BOTH)
         :rtype: generator
         '''
-        for protocoll in self.connection_type:
-            yield socket.socket(self.address_family, protocoll)
+        for protocoll in self.__connection_type:
+            yield socket.socket(self.__address_family, protocoll)
 
     def __scan(self) -> None:
         '''
@@ -116,7 +116,7 @@ class Scanner():
         '''
 
         for sock in self.__socket_factory():
-            port_range = self.__parse_range(self.range_input)
+            port_range = self.__parse_range(self.__range_input)
             current_protocoll = self.__PROTOCOLL_TRANSLATION[sock.type]
             for port in port_range:
                 status = sock.connect_ex((self.__ip, port))
@@ -125,29 +125,46 @@ class Scanner():
                 else:
                     self.__scanned_ports[port] = {current_protocoll: status}
 
-    def __add_descriptions(self, path):
-        port_range = self.__parse_range(self.range_input)
+    def __add_descriptions(self, path) -> None:
+        '''
+        Iterates through the __scanned_ports dict and appends a description of the form
+        [description, status]
+        according to a json list that holds that information.
+
+        :param path: Path to the json list
+        :type path: str
+        '''
+        port_range = self.__parse_range(self.__range_input)
         f = open(path)
         full_file = json.loads(f.read())
         for port in port_range:
+            #print(str(f"{port}" in full_file['ports']) + " and " + str(port in self.__scanned_ports))
             if port in self.__scanned_ports and f"{port}" in full_file['ports']:
+                print(f"add description to port {port}")
                 description = full_file['ports'][f"{port}"]
-                # TODO: Handle that better
+                # TODO: Handle double descriptions better
                 if type(description) == list:
                     description = description[0]
                 self.__scanned_ports[port]["Description"] = [description['description'], description['status']]
 
-    def get_all_ports(self):
+    def get_all_ports(self) -> dict:
+        '''
+        Returns the a dictionary of all scanned ports.
+
+        :return: Dictionary of all scanned ports
+        :rtype: dict
+        '''
         return self.__scanned_ports
 
-    def start_scan(self):
+    def start_scan(self, path_to_port_list):
         self.__scan()
-        self.__add_descriptions("data/ports/ports.json")
+        self.__add_descriptions(path_to_port_list)
 
 def debug():
+    print("Port scanner debug Info: ")
     shared = networking_lib.shared_info.Info()
     scanner = Scanner(shared)
-    scanner.start_scan()
+    scanner.start_scan("data/ports/ports.json")
 
 if __name__ == "__main__":
     debug()
