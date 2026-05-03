@@ -121,6 +121,8 @@ class ToolPage(QWidget):
         new_line_edit = QLineEdit()
         new_line_edit.setPlaceholderText(original_line_edit.placeholderText())
 
+        self.fields[line_edit_name + "2"] = new_line_edit
+
         # Shift everything after first line_edit to the right
         for col in range(column+1, self.initialCollumnCount):
             item = self.input_grid.itemAtPosition(row, col)
@@ -142,6 +144,8 @@ class ToolPage(QWidget):
             item = self.input_grid.itemAtPosition(row, col+1)
             
             self.input_grid.removeWidget(item_before.widget())
+            self.fields.pop((line_edit_name + "2"), None)
+
             self.input_grid.addWidget(item.widget(), row, col)
 
     def handle_split(self, line_edit_name):
