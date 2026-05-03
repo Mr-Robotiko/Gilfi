@@ -1,45 +1,57 @@
 """
 Gilfi Module - Port Scanner
 Checks if specific ports are open on a target host.
-TODO: connect C module
+TODO: connect to backend
 """
 
 from ui.toolpage import ToolPage
+from PyQt6.QtWidgets import (QWidget, QLineEdit)
+from PyQt6.QtCore import Qt
 
+import api_client
 
 def create_page():
     page = ToolPage(
         title="Port Scanner",
         description="Scans ports on a target host and shows their status."
     )
-    page.add_field("Target IP", "e.g. 192.168.1.1")
-    page.add_field("Ports", "e.g. 22,80,443 or 1-1024")
-    page.add_field("Timeout (s)", "e.g. 2")
+
+    page.add_field("Target IP", "e.g. 192.168.1.1", 2)
+    page.add_field_with_checkbox("Port", "e.g. 22,80,443", "Range", lambda: page.handle_split("Port"))
+    
     page.set_button_text("Start Scan")
     page.on_run = run
     return page
 
-
-def run(page):
+def run(page: ToolPage):
     target = page.get_input("Target IP")
-    ports = page.get_input("Ports")
+    port = page.get_input("Port")
+    port2 = page.get_input("Port2")
+    scan_range = [0]
 
     if not target:
         page.set_status("Please enter a target IP", error=True)
         return
 
     page.clear_output()
-    page.set_status("Scanning ...")
+    
+    if port:
+        scan_range[0] = int(port)
+    if port2:
+        if int(port2) < scan_range[0]:
+            page.set_status("Ending port cant be smaller than starting port", error=True)
+            return
+        scan_range.append(int(port2))
 
-    # TODO: call C module here
-    page.append_output(f"Target: {target}")
-    page.append_output(f"Ports:  {ports or '1-1024 (default)'}")
-    page.append_output("─" * 40)
-    page.append_output("Port 22    SSH       closed")
-    page.append_output("Port 80    HTTP      open")
-    page.append_output("Port 443   HTTPS     open")
-    page.append_output("Port 3306  MySQL     closed")
-    page.append_output("─" * 40)
-    page.append_output("2/4 ports open")
-
-    page.set_status("Done - 4 ports scanned")
+def call_port_scanner(page, target, scan_range):
+    page.set_status("Scanning...")
+    try:
+        result = api_client.scan_ports(target, scan_range)
+    except ConnectionError as e:
+        page.set_status("Backend not available", error=True)
+        page.append_output(str(e))
+        page.append_output("\nMake sure the backend container is running:")
+        page.append_output("  ./backend-docker.sh start")
+    except Exception as e:
+        page.set_status("Error", error=True)
+        page.append_output(f"Error: {str(e)}")
