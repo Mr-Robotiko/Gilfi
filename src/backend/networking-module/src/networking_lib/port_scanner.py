@@ -167,4 +167,5 @@ def debug():
     scanner.start_scan("data/ports/ports.json")
 
 if __name__ == "__main__":
-    debug()
+    pass
+    #debug()

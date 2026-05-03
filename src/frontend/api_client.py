@@ -69,6 +69,14 @@ class GilfiAPIClient:
             Dictionary of available modules and their endpoints
         """
         return self._request('GET', '/api/modules')
+
+    # Networking Methods
+    def scan_ports(self, target: str, scan_range: list) -> dict(int, dict(str, int | list(str, str))):
+        print("Sending req")
+        return self._request('POST', 'api/networking/port_scanner', json={
+            'target': target,
+            'scan_range': scan_range
+        })
     
     # Hash Module Methods
     

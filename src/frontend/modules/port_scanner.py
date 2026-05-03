@@ -43,6 +43,8 @@ def run(page: ToolPage):
             return
         scan_range.append(int(port2))
 
+    call_port_scanner(page, target, scan_range)
+
 def call_port_scanner(page, target, scan_range):
     page.set_status("Scanning...")
     try:

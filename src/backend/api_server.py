@@ -14,6 +14,7 @@ from hash_lib.hash_identifier.identifier import HashIdentifier
 from hash_lib.hash_cracker.cracker import Cracker
 
 from networking_lib.shared_info import Info
+from networking_lib.port_scanner import Scanner
 
 # Paths
 RSA_BINARY = "/app/backend/rsa-module/rsa-module"
@@ -35,6 +36,8 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
 
 # Initialize modules
+info = Info()
+scanner = Scanner()
 hasher = Hasher()
 identifier = HashIdentifier()
 cracker = Cracker()
@@ -69,6 +72,28 @@ def health_check():
         'version': '1.0.0'
     })
 
+@app.route('api/networking/port_scanner', methods=['post'])
+def scan_ports():
+    """
+    Scan ports of a given IP
+    POST /api/networking/port_scanner
+    Body: {"target": "127.0.0.1", "scan_range": [0]}
+    """
+    try:
+        data = request.get_json()
+        target = data.get('target')
+        scan_range = data.get('scan_range')
+
+        print(scan_range)
+
+        if not target:
+            return jsonify({'error': 'IP is required'}), 400
+        
+        if not scan_range:
+            return jsonify({'error': 'Scan range is required'}), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/hash/generate', methods=['POST'])
 def hash_generate():
