@@ -24,6 +24,8 @@ class ToolPage(QWidget):
 
         self.setup_ui()
 
+        self.initialCollumnCount = self.input_grid.columnCount() + 1
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
@@ -120,14 +122,14 @@ class ToolPage(QWidget):
         new_line_edit.setPlaceholderText(original_line_edit.placeholderText())
 
         # Shift everything after first line_edit to the right
-        for col in range(column+1, self.input_grid.columnCount()):
+        for col in range(column+1, self.initialCollumnCount):
             item = self.input_grid.itemAtPosition(row, col)
             self.input_grid.addWidget(new_line_edit, row, col)
             self.input_grid.addWidget(item.widget(), row, col+1)
 
         # Adjust the row span of the objects
         for row in range(self.input_grid.rowCount()):
-            for col in range(self.input_grid.columnCount()):
+            for col in range(self.initialCollumnCount):
                 item = self.input_grid.itemAtPosition(row, col)
 
     def undo_split_input_field(self, line_edit_name):
@@ -135,7 +137,7 @@ class ToolPage(QWidget):
         idx = self.input_grid.indexOf(original_line_edit)
         row, column, _, _ = self.input_grid.getItemPosition(idx)
 
-        for col in range(column+1, self.input_grid.columnCount()-1):
+        for col in range(column+1, self.initialCollumnCount):
             item_before = self.input_grid.itemAtPosition(row, col)
             item = self.input_grid.itemAtPosition(row, col+1)
             
