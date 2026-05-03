@@ -5,7 +5,7 @@ Reusable widget for each tool module.
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QTextEdit, QGroupBox, QGridLayout
+    QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox
 )
 from PyQt6.QtCore import Qt
 
@@ -78,17 +78,33 @@ class ToolPage(QWidget):
 
         layout.addWidget(self.output_group, stretch=1)
 
-    def add_field(self, label, placeholder=""):
+    def add_field(self, label, placeholder="", checkable=False, checkbox_placeholder=""):
         lbl = QLabel(label)
         lbl.setStyleSheet("color: #8a8aa0; font-size: 12px;")
 
         line_edit = QLineEdit()
         line_edit.setPlaceholderText(placeholder)
 
+        checkbox = QCheckBox()
+        checkbox.setText(checkbox_placeholder)
+
         self.fields[label] = line_edit
         self.input_grid.addWidget(lbl, self.field_row, 0, Qt.AlignmentFlag.AlignRight)
         self.input_grid.addWidget(line_edit, self.field_row, 1)
+
+        # TODO: Make input fields not retract when checkbox is added
+        if checkable:
+            self.input_grid.addWidget(checkbox, self.field_row, 2)
+
         self.field_row += 1
+
+    def append_checkbox(self, label, field):
+        lbl = QLabel(label)
+
+        checkbox = QCheckBox()
+        checkbox.setText(label)
+
+        self.input_grid.addWidget()
 
     def get_input(self, label):
         widget = self.fields.get(label)
