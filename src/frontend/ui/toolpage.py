@@ -5,7 +5,8 @@ Reusable widget for each tool module.
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox
+    QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox,
+    QLayoutItem, QWidgetItem
 )
 from PyQt6.QtCore import Qt
 
@@ -87,6 +88,7 @@ class ToolPage(QWidget):
 
         checkbox = QCheckBox()
         checkbox.setText(checkbox_placeholder)
+        checkbox.setStyleSheet("color: #8a8aa0; font-size: 12px;")
 
         self.fields[label] = line_edit
         self.input_grid.addWidget(lbl, self.field_row, 0, Qt.AlignmentFlag.AlignRight)
@@ -97,6 +99,27 @@ class ToolPage(QWidget):
             self.input_grid.addWidget(checkbox, self.field_row, 2)
 
         self.field_row += 1
+
+    def split_input_field(self, line_edit_name, placeholder=""):
+        original_line_edit = self.fields[line_edit_name]
+        idx = self.input_grid.indexOf(original_line_edit)
+        row, column, _, _ = self.input_grid.getItemPosition(idx)
+
+        new_line_edit = QLineEdit()
+        new_line_edit.setPlaceholderText(placeholder)
+
+        # Shift everything after first line_edit to the right
+        for col in range(column+1, self.input_grid.columnCount()):
+            item = self.input_grid.itemAtPosition(row, col)
+            self.input_grid.addWidget(new_line_edit, row, col)
+            self.input_grid.addWidget(item.widget(), row, col+1)
+
+        # Adjust the row span of the objects
+        for row in range(self.input_grid.rowCount):
+            for col in range(self.input_grid.columnCount):
+                item = self.input_grid.itemAtPosition(row, col)
+
+
 
     def get_input(self, label):
         widget = self.fields.get(label)
