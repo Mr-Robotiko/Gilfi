@@ -18,6 +18,7 @@ class ToolPage(QWidget):
         self.title = title
         self.description = description
         self.fields = {}
+        self.isSplit = {}
         self.field_row = 0
         self.on_run = None
 
@@ -79,7 +80,19 @@ class ToolPage(QWidget):
 
         layout.addWidget(self.output_group, stretch=1)
 
-    def add_field(self, label, placeholder="", checkable=False, checkbox_placeholder=""):
+    def add_field(self, label, placeholder="", span=1):
+        lbl = QLabel(label)
+        lbl.setStyleSheet("color: #8a8aa0; font-size: 12px;")
+
+        line_edit = QLineEdit()
+        line_edit.setPlaceholderText(placeholder)
+
+        self.fields[label] = line_edit
+        self.input_grid.addWidget(lbl, self.field_row, 0, Qt.AlignmentFlag.AlignRight)
+        self.input_grid.addWidget(line_edit, self.field_row, 1, 1, span)
+        self.field_row += 1
+
+    def add_field_with_checkbox(self, label, placeholder="", checkbox_placeholder="", checkbox_connect_to=None):
         lbl = QLabel(label)
         lbl.setStyleSheet("color: #8a8aa0; font-size: 12px;")
 
@@ -89,24 +102,22 @@ class ToolPage(QWidget):
         checkbox = QCheckBox()
         checkbox.setText(checkbox_placeholder)
         checkbox.setStyleSheet("color: #8a8aa0; font-size: 12px;")
+        checkbox.stateChanged.connect(checkbox_connect_to)
 
         self.fields[label] = line_edit
+        self.isSplit[label] = False
         self.input_grid.addWidget(lbl, self.field_row, 0, Qt.AlignmentFlag.AlignRight)
         self.input_grid.addWidget(line_edit, self.field_row, 1)
-
-        # TODO: Make input fields not retract when checkbox is added
-        if checkable:
-            self.input_grid.addWidget(checkbox, self.field_row, 2)
-
+        self.input_grid.addWidget(checkbox, self.field_row, 2)
         self.field_row += 1
 
-    def split_input_field(self, line_edit_name, placeholder=""):
+    def split_input_field(self, line_edit_name):
         original_line_edit = self.fields[line_edit_name]
         idx = self.input_grid.indexOf(original_line_edit)
         row, column, _, _ = self.input_grid.getItemPosition(idx)
 
         new_line_edit = QLineEdit()
-        new_line_edit.setPlaceholderText(placeholder)
+        new_line_edit.setPlaceholderText(original_line_edit.placeholderText())
 
         # Shift everything after first line_edit to the right
         for col in range(column+1, self.input_grid.columnCount()):
@@ -115,11 +126,20 @@ class ToolPage(QWidget):
             self.input_grid.addWidget(item.widget(), row, col+1)
 
         # Adjust the row span of the objects
-        for row in range(self.input_grid.rowCount):
-            for col in range(self.input_grid.columnCount):
+        for row in range(self.input_grid.rowCount()):
+            for col in range(self.input_grid.columnCount()):
                 item = self.input_grid.itemAtPosition(row, col)
 
+    def undo_split_input_field(self, line_edit_name):
+        pass
 
+    def handle_split(self, line_edit_name):
+        if self.isSplit[line_edit_name]:
+            self.undo_split_input_field(line_edit_name)
+            self.isSplit[line_edit_name] = False
+        else:
+            self.split_input_field(line_edit_name)
+            self.isSplit[line_edit_name] = True
 
     def get_input(self, label):
         widget = self.fields.get(label)
