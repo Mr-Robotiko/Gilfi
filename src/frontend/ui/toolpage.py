@@ -131,7 +131,16 @@ class ToolPage(QWidget):
                 item = self.input_grid.itemAtPosition(row, col)
 
     def undo_split_input_field(self, line_edit_name):
-        pass
+        original_line_edit = self.fields[line_edit_name]
+        idx = self.input_grid.indexOf(original_line_edit)
+        row, column, _, _ = self.input_grid.getItemPosition(idx)
+
+        for col in range(column+1, self.input_grid.columnCount()-1):
+            item_before = self.input_grid.itemAtPosition(row, col)
+            item = self.input_grid.itemAtPosition(row, col+1)
+            
+            self.input_grid.removeWidget(item_before.widget())
+            self.input_grid.addWidget(item.widget(), row, col)
 
     def handle_split(self, line_edit_name):
         if self.isSplit[line_edit_name]:
