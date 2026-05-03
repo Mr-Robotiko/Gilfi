@@ -98,14 +98,6 @@ class ToolPage(QWidget):
 
         self.field_row += 1
 
-    def append_checkbox(self, label, field):
-        lbl = QLabel(label)
-
-        checkbox = QCheckBox()
-        checkbox.setText(label)
-
-        self.input_grid.addWidget()
-
     def get_input(self, label):
         widget = self.fields.get(label)
         if widget:
