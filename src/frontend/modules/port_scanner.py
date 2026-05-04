@@ -16,9 +16,9 @@ def create_page():
         description="Scans ports on a target host and shows their status."
     )
 
-    page.add_field("Target IP", "e.g. 192.168.1.1", 2)
-    page.add_field_with_checkbox("Port", "e.g. 22,80,443", "Range", lambda: page.handle_split("Port"))
-    
+    page.add_field("Target IP", "e.g. 192.168.1.1")
+    page.add_field("Ports", "e.g. 22,80,443 or 1-1024")
+    page.add_dropdown(2, 1, ["BOTH", "TCP", "UDP"], "Protocol")
     page.set_button_text("Start Scan")
     page.on_run = run
     return page
