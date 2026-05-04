@@ -14,7 +14,7 @@ from hash_lib.hash_identifier.identifier import HashIdentifier
 from hash_lib.hash_cracker.cracker import Cracker
 
 from networking_lib.shared_info import Info
-import networking_lib.port_scanner
+from networking_lib.port_scanner import Scanner
 
 # Paths
 RSA_BINARY = "/app/backend/rsa-module/rsa-module"
@@ -83,15 +83,19 @@ def scan_ports():
         target = data.get('target')
         scan_range = data.get('scan_range')
 
-        scanner = Scanner(info, scan_range)
-
         if not target:
             return jsonify({'error': 'IP is required'}), 400
         
         if not scan_range:
             return jsonify({'error': 'Scan range is required'}), 400
 
+        info.set_ip(target)
+        scanner = Scanner(info, scan_range)
+        scanner.start_scan("/app/data/ports/ports.json")
+        return scanner.get_all_ports()
+
     except Exception as e:
+        print(e)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/hash/generate', methods=['POST'])

@@ -182,9 +182,10 @@ def get_client(base_url: str = "http://localhost:8000") -> GilfiAPIClient:
 
 
 # Convenience functions for direct use
-def scan_ports(target: str, scan_range: list) -> dict(int, dict(str, int | list(str, str))):
+def scan_ports(target: str, scan_range: list) -> Dict(int, Dict(str, int | List(str, str))):
     result = get_client().scan_ports(target, scan_range)
     print(result)
+    return result
 
 def hash_generate(text: str, algorithm: str = 'sha256') -> str:
     """Generate hash (returns just the hash string)"""
