@@ -14,7 +14,7 @@ def create_page():
     )
     page.add_field("Target IP", "e.g. 192.168.1.1")
     page.add_field("Ports", "e.g. 22,80,443 or 1-1024")
-    page.add_field("Timeout (s)", "e.g. 2")
+    page.add_dropdown(2, 1, ["BOTH", "TCP", "UDP"], "Protocol")
     page.set_button_text("Start Scan")
     page.on_run = run
     return page

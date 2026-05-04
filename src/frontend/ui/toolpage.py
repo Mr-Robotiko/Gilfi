@@ -6,7 +6,7 @@ Reusable widget for each tool module.
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox,
-    QLayoutItem, QWidgetItem
+    QLayoutItem, QWidgetItem, QComboBox
 )
 from PyQt6.QtCore import Qt
 
@@ -112,6 +112,12 @@ class ToolPage(QWidget):
         self.input_grid.addWidget(line_edit, self.field_row, 1)
         self.input_grid.addWidget(checkbox, self.field_row, 2)
         self.field_row += 1
+
+    def add_dropdown(self, row, col, options, label):
+        combo_box = QComboBox()
+        combo_box.addItems(options)
+        self.input_grid.addWidget(combo_box, row, col)
+        self.fields[label] = combo_box
 
     def split_input_field(self, line_edit_name):
         original_line_edit = self.fields[line_edit_name]
