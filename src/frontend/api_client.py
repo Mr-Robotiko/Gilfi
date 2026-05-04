@@ -71,10 +71,12 @@ class GilfiAPIClient:
         return self._request('GET', '/api/modules')
 
     # Networking Methods
-    def scan_ports(self, target: str, scan_range: list) -> Dict[str, Any]:
+    def scan_ports(self, target: str, scan_range: list, ip_type="IPV4", connection_type="BOTH") -> Dict[str, Any]:
         return self._request('POST', '/api/networking/port_scanner', json={
             'target': target,
-            'scan_range': scan_range
+            'scan_range': scan_range,
+            'ip_type': ip_type,
+            'connection_type': connection_type
         })
     
     # Hash Module Methods
@@ -182,7 +184,7 @@ def get_client(base_url: str = "http://localhost:8000") -> GilfiAPIClient:
 
 
 # Convenience functions for direct use
-def scan_ports(target: str, scan_range: list) -> Dict(int, Dict(str, int | List(str, str))):
+def scan_ports(target: str, scan_range: list, ip_type="IPV4", connection_type="BOTH") -> Dict(int, Dict(str, int | List(str, str))):
     result = get_client().scan_ports(target, scan_range)
     return result
 

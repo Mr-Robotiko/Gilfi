@@ -45,7 +45,7 @@ class Scanner():
         if len(range_input) == 1:
             if range_input[0] == 0:
                 return range(1, self.__MAX_PORT_NR+1)
-            return range(range_input, range_input+1)
+            return range(range_input[0], range_input[0]+1)
 
         # Check if range is valid
         if len(range_input) == 2 and (range_input[1] - range_input[0]) > 1:

@@ -82,6 +82,7 @@ def scan_ports():
         data = request.get_json()
         target = data.get('target')
         scan_range = data.get('scan_range')
+        connection_type = data.get('connection_type')
 
         if not target:
             return jsonify({'error': 'IP is required'}), 400
@@ -90,7 +91,7 @@ def scan_ports():
             return jsonify({'error': 'Scan range is required'}), 400
 
         info.set_ip(target)
-        scanner = Scanner(info, scan_range)
+        scanner = Scanner(info, scan_range, connection_type=connection_type)
         scanner.start_scan("/app/data/ports/ports.json")
         return scanner.get_all_ports()
 

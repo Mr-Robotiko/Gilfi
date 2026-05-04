@@ -2,6 +2,7 @@
 Gilfi Module - Port Scanner
 Checks if specific ports are open on a target host.
 TODO: connect to backend
+TODO for merz: meine eier lecken
 """
 
 from ui.toolpage import ToolPage
@@ -17,8 +18,8 @@ def create_page():
     )
 
     page.add_field("Target IP", "e.g. 192.168.1.1")
-    page.add_field("Ports", "e.g. 22,80,443 or 1-1024")
-    page.add_dropdown(2, 1, ["BOTH", "TCP", "UDP"], "Protocol")
+    page.add_field_with_checkbox("Port", "e.g. 22,80,443", "Range", lambda: page.handle_split("Port"))
+    page.add_dropdown(2, 1, ["TCP", "UDP", "BOTH"], "Protocol")
     page.set_button_text("Start Scan")
     page.on_run = run
     return page
@@ -48,7 +49,7 @@ def run(page: ToolPage):
 def call_port_scanner(page, target, scan_range):
     page.set_status("Scanning...")
     try:
-        result = api_client.scan_ports(target, scan_range)
+        result = api_client.scan_ports(target, scan_range, page.fields["Protocol"].currentText())
         print_result(page, result)
     except ConnectionError as e:
         page.set_status("Backend not available", error=True)
@@ -60,6 +61,38 @@ def call_port_scanner(page, target, scan_range):
         page.append_output(f"Error: {str(e)}")
 
 def print_result(page, result):
+    port = "Port".ljust(5)
+    desc = "Description".rjust(2)
+    prot = page.fields["Protocol"].currentText()
+    prot_list = [prot]
+
+    if prot == "BOTH":
+        prot = "UDP      TCP"
+        prot_list = ["UDP", "TCP"]
+
+    prot = prot.center(2)
+    header = port + "   " + prot + "     " + desc  
+
+    page.append_output(header)
+
     for key in result.keys():
-        page.append_output("Port | UDP | TCP | Description")
-        page.append_output(str(key))
+        port = str(key).ljust(5)
+        prot_state = "Closed "
+        desc = result.get(key).get("Description")
+
+        if len(prot_list) == 1:
+            if result.get(key).get(prot) == 0:
+                prot_state = "Open   "
+        else:
+            if result.get(key).get("UDP") == 0:
+                prot_state = "Open "
+            if result.get(key).get("TCP") == 0:
+                prot_state += "  Open "
+            else:
+                prot_state += "  Closed "
+
+        if desc:
+            desc = desc[0]
+
+        page.append_output(f"{port}   {prot_state}   {desc}")
+
