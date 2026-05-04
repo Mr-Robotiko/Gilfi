@@ -21,6 +21,7 @@ RUN chmod +x /app/backend/entrypoint.sh
 COPY . /app/backend/
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install -e /app/backend/hash-module
+RUN pip install -e /app/backend/networking-module
 
 # Compile RSA module
 RUN gcc /app/backend/rsa-module/rsa-module.c -o /app/backend/rsa-module/rsa-module

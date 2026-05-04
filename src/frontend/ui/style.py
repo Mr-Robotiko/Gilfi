@@ -101,6 +101,17 @@ QLineEdit::placeholder {
     color: #555570;
 }
 
+QComboBox {
+    background: #0f0f23;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    padding: 7px 10px;
+    color: #e0e0e0;
+}
+QComboBox:focus {
+    border: 1px solid #53a8d8;
+}
+
 /* buttons */
 QPushButton#btnRun {
     background: #0f3460;
