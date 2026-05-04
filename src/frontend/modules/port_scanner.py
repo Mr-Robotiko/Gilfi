@@ -49,6 +49,7 @@ def call_port_scanner(page, target, scan_range):
     page.set_status("Scanning...")
     try:
         result = api_client.scan_ports(target, scan_range)
+        print_result(page, result)
     except ConnectionError as e:
         page.set_status("Backend not available", error=True)
         page.append_output(str(e))
@@ -57,3 +58,8 @@ def call_port_scanner(page, target, scan_range):
     except Exception as e:
         page.set_status("Error", error=True)
         page.append_output(f"Error: {str(e)}")
+
+def print_result(page, result):
+    for key in result.keys():
+        page.append_output("Port | UDP | TCP | Description")
+        page.append_output(str(key))
