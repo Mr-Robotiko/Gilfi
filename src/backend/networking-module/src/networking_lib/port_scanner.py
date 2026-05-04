@@ -22,7 +22,7 @@ class Scanner():
     __MAX_PORT_NR = 64738
     __PROTOCOLL_TRANSLATION = {1: "TCP", 2: "UDP"}
 
-    def __init__(self, shared_info: shared_info.Info, range_input=[0], address_family="IPV4", connection_type="BOTH"):
+    def __init__(self, shared_info, range_input=[0], address_family="IPV4", connection_type="BOTH"):
         self.__ip = '127.0.0.1'
         self.__scanned_ports = {}
         self.__shared_info = shared_info

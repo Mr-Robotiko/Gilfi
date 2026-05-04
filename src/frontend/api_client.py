@@ -71,9 +71,8 @@ class GilfiAPIClient:
         return self._request('GET', '/api/modules')
 
     # Networking Methods
-    def scan_ports(self, target: str, scan_range: list) -> dict(int, dict(str, int | list(str, str))):
-        print("Sending req")
-        return self._request('POST', 'api/networking/port_scanner', json={
+    def scan_ports(self, target: str, scan_range: list) -> Dict[str, Any]:
+        return self._request('POST', '/api/networking/port_scanner', json={
             'target': target,
             'scan_range': scan_range
         })
@@ -183,6 +182,9 @@ def get_client(base_url: str = "http://localhost:8000") -> GilfiAPIClient:
 
 
 # Convenience functions for direct use
+def scan_ports(target: str, scan_range: list) -> dict(int, dict(str, int | list(str, str))):
+    result = get_client().scan_ports(target, scan_range)
+    print(result)
 
 def hash_generate(text: str, algorithm: str = 'sha256') -> str:
     """Generate hash (returns just the hash string)"""

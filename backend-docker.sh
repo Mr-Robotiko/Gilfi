@@ -106,6 +106,11 @@ case "${1:-}" in
         $DOCKER_CMD exec -it $CONTAINER_NAME bash
         ;;
     
+    port_scanner)
+        echo "Backend container status:"
+        $DOCKER_CMD ps -a --afilter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        ;;
+
     status)
         echo "Backend container status:"
         $DOCKER_CMD ps -a --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

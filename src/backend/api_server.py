@@ -14,7 +14,7 @@ from hash_lib.hash_identifier.identifier import HashIdentifier
 from hash_lib.hash_cracker.cracker import Cracker
 
 from networking_lib.shared_info import Info
-from networking_lib.port_scanner import Scanner
+import networking_lib.port_scanner
 
 # Paths
 RSA_BINARY = "/app/backend/rsa-module/rsa-module"
@@ -37,7 +37,6 @@ CORS(app)  # Enable CORS for frontend communication
 
 # Initialize modules
 info = Info()
-scanner = Scanner()
 hasher = Hasher()
 identifier = HashIdentifier()
 cracker = Cracker()
@@ -72,7 +71,7 @@ def health_check():
         'version': '1.0.0'
     })
 
-@app.route('api/networking/port_scanner', methods=['post'])
+@app.route('/api/networking/port_scanner', methods=['post'])
 def scan_ports():
     """
     Scan ports of a given IP
@@ -84,7 +83,7 @@ def scan_ports():
         target = data.get('target')
         scan_range = data.get('scan_range')
 
-        print(scan_range)
+        scanner = Scanner(info, scan_range)
 
         if not target:
             return jsonify({'error': 'IP is required'}), 400
