@@ -109,6 +109,32 @@ class Scanner():
         for protocoll in self.__connection_type:
             yield socket.socket(self.__address_family, protocoll)
 
+    def __scan_udp_port(self, port) -> int:
+        '''
+        Probes a single UDP port by sending an empty packet and waiting for a response.
+        Returns 0 if the port appears open or filtered (no ICMP unreachable received),
+        and 1 if the port is closed (ICMP port unreachable / ConnectionRefusedError).
+
+        :param port: UDP port number to probe
+        :type port: int
+        :return: 0 for open/filtered, 1 for closed
+        :rtype: int
+        '''
+        sock = socket.socket(self.__address_family, socket.SOCK_DGRAM)
+        sock.settimeout(2)
+        try:
+            sock.sendto(b'', (self.__ip, port))
+            sock.recvfrom(1024)
+            return 0  # received a response — port is open
+        except socket.timeout:
+            return 0  # no ICMP unreachable — port is open or filtered
+        except ConnectionRefusedError:
+            return 1  # ICMP port unreachable — port is closed
+        except OSError:
+            return 1
+        finally:
+            sock.close()
+
     def __scan(self) -> None:
         '''
         Performs scan over the given ip, protocoll/s and port range.
@@ -119,11 +145,15 @@ class Scanner():
             port_range = self.__parse_range(self.__range_input)
             current_protocoll = self.__PROTOCOLL_TRANSLATION[sock.type]
             for port in port_range:
-                status = sock.connect_ex((self.__ip, port))
+                if current_protocoll == "UDP":
+                    status = self.__scan_udp_port(port)
+                else:
+                    status = sock.connect_ex((self.__ip, port))
                 if port in self.__scanned_ports:
                     self.__scanned_ports[port][current_protocoll] = status
                 else:
                     self.__scanned_ports[port] = {current_protocoll: status}
+            sock.close()
 
     def __add_descriptions(self, path) -> None:
         '''
