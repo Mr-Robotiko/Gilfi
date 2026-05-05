@@ -21,8 +21,8 @@ class RSAWorker(QThread):
 
     def run(self):
         try:
-            # Call backend API
-            result = api_client.rsa_encrypt(int(self.plaintext))
+            # Call backend API with plaintext as a number
+            result = api_client.rsa_encrypt(self.plaintext, 'encrypt')
             
             if result.get('success'):
                 # Format output similar to C binary

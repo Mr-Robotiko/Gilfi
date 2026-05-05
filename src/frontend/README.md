@@ -8,25 +8,27 @@
 - [Architecture](#architecture)
 - [Class Diagram](#class-diagram)
 - [Component Overview](#component-overview)
+- [Tool Modules](#tool-modules)
 - [Flow Charts](#flow-charts)
 - [Module Interface](#module-interface)
+- [Cross-Module Communication](#cross-module-communication)
 - [Threading Model](#threading-model)
 - [Styling](#styling)
-- [Future: API Client Migration](#future-api-client-migration)
 
 ---
 
 ## Overview
 
-The Gilfi frontend is a PyQt6-based desktop application that provides a unified GUI for all Gilfi security modules. It follows a modular plugin-style architecture where each tool implements a simple `create_page()` interface and gets registered in the main navigation.
+The Gilfi frontend is a PyQt6-based desktop application that provides a unified GUI for all Gilfi security tools. It follows a modular plugin-style architecture in which every tool implements a simple `create_page()` interface and gets registered in the main navigation list.
 
-The frontend runs **natively** on the user's machine. Backend services (hash-lib, RSA binary, Ollama chatbot) are accessed either through direct imports, subprocess calls, or HTTP requests.
+The frontend runs **natively** on the user's machine and talks to the dockerized backend over HTTP through a central `GilfiAPIClient`. The Ask Gilfi chatbot connects to a local Ollama service.
 
 ## Directory Structure
 
 ```
 src/frontend/
 ├── main.py                      # Application entry point
+├── api_client.py                # HTTP client for backend communication
 ├── ui/
 │   ├── __init__.py
 │   ├── mainwindow.py            # Main window with navigation + chatbot dock
@@ -35,10 +37,12 @@ src/frontend/
 │   └── style.py                 # Global dark theme stylesheet (QSS)
 └── modules/
     ├── __init__.py
-    ├── network_scanner.py       # Network scan module (placeholder)
-    ├── port_scanner.py          # Port scan module (placeholder)
-    ├── rsa_encryption.py        # RSA module (calls C binary)
-    └── hash_module.py           # Hash module (uses backend hash_lib)
+    ├── network_scanner.py       # Network device discovery
+    ├── port_scanner.py          # Port scanning with service detection
+    ├── rsa_encryption.py        # RSA encryption / decryption
+    ├── hash_module.py           # Hash generation and identification
+    ├── hash_crack_module.py     # Dictionary-based hash cracking
+    └── arcade.py                # Mini-games that showcase the modules
 ```
 
 ## Setup
@@ -46,8 +50,10 @@ src/frontend/
 ### Dependencies
 
 ```bash
-pip install PyQt6 requests
+pip install -r requirements.txt
 ```
+
+This installs PyQt6, pyqt6-sip, and Requests.
 
 ### Run
 
@@ -56,9 +62,21 @@ cd src/frontend
 python main.py
 ```
 
+The frontend expects the backend to be reachable at `http://localhost:8000`. Start it via:
+
+```bash
+# Linux / Mac
+./backend-docker.sh
+
+# Windows
+docker compose -f docker-compose.backend.yaml up -d
+```
+
+If the backend is unreachable, modules that need it will display a clear error in their output area; modules that work locally (Crack the Code, Hash Hunter, Factorize) keep working.
+
 ### Ask Gilfi Chatbot (optional)
 
-Requires a running Ollama instance on `localhost:11434`:
+Requires a running Ollama instance on `localhost:11435`:
 
 ```bash
 # via container
@@ -68,6 +86,8 @@ podman start ollama
 ollama pull granite4:350m
 ollama create ask-gilfi -f src/backend/ask-gilfi-module/models/ask-gilfi-4:350m/modelfile.dockerfile
 ```
+
+The chatbot is fully optional. The rest of the GUI works without it.
 
 ## Architecture
 
@@ -80,20 +100,28 @@ ollama create ask-gilfi -f src/backend/ask-gilfi-module/models/ask-gilfi-4:350m/
 │              │      MainWindow         │                     │
 │              │    (QMainWindow)        │                     │
 │              └──┬──────────┬───────┬───┘                     │
-│                 │          │       │                          │
-│      ┌──────────▼──┐  ┌───▼────┐  ▼─────────────┐           │
-│      │  QListWidget │  │QStack- │  │  QDockWidget │           │
-│      │  (navList)   │  │Widget  │  │  (chatDock)  │           │
-│      │              │  │        │  │              │           │
-│      │ - Network    │  │ Tool   │  │  ChatWidget  │           │
-│      │ - Port       │◄─┤ Pages  │  │   (Ollama)   │           │
-│      │ - RSA        │  │        │  │              │           │
-│      │ - Hash       │  │        │  │              │           │
-│      └──────────────┘  └────────┘  └──────────────┘           │
+│                 │          │       │                         │
+│      ┌──────────▼──┐  ┌────▼────┐  ▼─────────────┐           │
+│      │  QListWidget │ │QStacked-│  │  QDockWidget │           │
+│      │  (navList)   │ │ Widget  │  │  (chatDock)  │           │
+│      │              │ │         │  │              │           │
+│      │ - Network    │ │  Tool   │  │  ChatWidget  │           │
+│      │ - Port       │ │  Pages  │  │   (Ollama)   │           │
+│      │ - RSA        │◄┤         │  │              │           │
+│      │ - Hash       │ │         │  │              │           │
+│      │ - Hash Crack │ │         │  │              │           │
+│      │ - Arcade     │ │         │  │              │           │
+│      └──────────────┘ └────┬────┘  └──────────────┘           │
+│                            │                                  │
+│                   ┌────────▼────────┐                         │
+│                   │ GilfiAPIClient  │ ──► localhost:8000      │
+│                   └─────────────────┘                         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-The left navigation (`QListWidget`) controls which `ToolPage` is shown in the `QStackedWidget`. The Ask Gilfi chatbot lives in a `QDockWidget` that can be toggled, moved, or closed independently.
+The left navigation (`QListWidget`) controls which page is shown in the `QStackedWidget`. The Ask Gilfi chatbot lives in a `QDockWidget` that can be toggled, moved, or closed independently.
+
+All tool modules access the backend through `api_client.py`, which wraps the REST endpoints exposed by the FastAPI backend.
 
 ## Class Diagram
 
@@ -164,13 +192,32 @@ classDiagram
         +run()
     }
 
+    class CrackerWorker {
+        -str password
+        -str algo
+        +done : pyqtSignal(object)
+        +error : pyqtSignal(str)
+        +run()
+    }
+
+    class ArcadeWidget {
+        -QTabWidget tabs
+        +CrackTheCodeGame
+        +HashHunterGame
+        +SurviveTheCrackerGame
+        +FactorizeGame
+    }
+
     QMainWindow <|-- MainWindow
     QWidget <|-- ToolPage
     QWidget <|-- ChatWidget
+    QWidget <|-- ArcadeWidget
     QThread <|-- ChatWorker
     QThread <|-- RSAWorker
+    QThread <|-- CrackerWorker
 
-    MainWindow "1" *-- "4" ToolPage : contains
+    MainWindow "1" *-- "5" ToolPage : contains
+    MainWindow "1" *-- "1" ArcadeWidget : contains
     MainWindow "1" *-- "1" ChatWidget : contains
     ChatWidget "1" o-- "0..1" ChatWorker : creates
 ```
@@ -180,11 +227,38 @@ classDiagram
 | Component | File | Responsibility |
 |---|---|---|
 | `MainWindow` | `ui/mainwindow.py` | Top-level window, navigation, menu bar, tool registration, chatbot dock |
-| `ToolPage` | `ui/toolpage.py` | Reusable input/output template for every module |
+| `ToolPage` | `ui/toolpage.py` | Reusable input/output template for every standard tool module |
 | `ChatWidget` | `ui/chatwidget.py` | Chat UI for Ask Gilfi, manages `ChatWorker` thread |
 | `ChatWorker` | `ui/chatwidget.py` | Background thread for streaming Ollama API responses |
-| `RSAWorker` | `modules/rsa_encryption.py` | Background thread for running the C binary |
+| `RSAWorker` | `modules/rsa_encryption.py` | Background thread for running the RSA C binary |
+| `CrackerWorker` | `modules/arcade.py` | Background thread for hash cracking calls in the arcade |
+| `ArcadeWidget` | `modules/arcade.py` | Custom widget hosting four mini-games as tabs |
+| `GilfiAPIClient` | `api_client.py` | Central HTTP client for all backend endpoints |
 | `STYLESHEET` | `ui/style.py` | Global QSS dark theme |
+
+## Tool Modules
+
+The frontend registers six tools in the navigation list. Five are standard `ToolPage`-based modules; the Arcade is a custom widget.
+
+| Module | Backend? | Description |
+|---|---|---|
+| **Network Scanner** | yes | Discovers reachable hosts on the local network |
+| **Port Scanner** | yes | Scans TCP ports on a given target with service detection |
+| **RSA Encryption** | yes | Encrypts and decrypts messages using a C binary on the backend |
+| **Hash Module** | yes | Generates and identifies hashes (MD5, SHA-1, SHA-256, ...) |
+| **Hash Crack Module** | yes | Cracks password hashes via a wordlist attack (rockyou.txt) |
+| **Arcade** | partial | Four mini-games, see below |
+
+### Arcade
+
+The Arcade is a single navigation entry that contains four mini-games as inner tabs. It serves as a playful entry point and a live showcase of the surrounding modules.
+
+| Game | Backend? | Showcases |
+|---|---|---|
+| **Crack the Code** | no | Caesar cipher puzzle - pure crypto math, no backend |
+| **Hash Hunter** | no | Pick the word that produces the displayed hash; supports forwarding the hash to the Hash and Hash Crack modules |
+| **Survive the Cracker** | yes | Type a password and watch the real Hash Crack module attack it live |
+| **Factorize!** | no | Factor `N = p * q` to motivate why RSA is hard; manual level picker |
 
 ## Flow Charts
 
@@ -192,22 +266,23 @@ classDiagram
 
 ```mermaid
 flowchart TD
-    A[main.py] --> B[Add hash_lib to sys.path]
-    B --> C[Create QApplication]
-    C --> D[Apply stylesheet]
-    D --> E[Create MainWindow]
-    E --> F[setup_menubar]
-    E --> G[setup_central]
-    E --> H[setup_chatbot_dock]
-    E --> I[setup_statusbar]
-    G --> J[register_tools]
-    J --> K[network_scanner.create_page]
-    J --> L[port_scanner.create_page]
-    J --> M[rsa_encryption.create_page]
-    J --> N[hash_module.create_page]
-    K & L & M & N --> O[Add to nav_list + stack]
-    O --> P[Select first tool]
-    P --> Q[window.show]
+    A[main.py] --> B[Create QApplication]
+    B --> C[Apply stylesheet]
+    C --> D[Create MainWindow]
+    D --> E[setup_menubar]
+    D --> F[setup_central]
+    D --> G[setup_chatbot_dock]
+    D --> H[setup_statusbar]
+    F --> I[register_tools]
+    I --> J[network_scanner.create_page]
+    I --> K[port_scanner.create_page]
+    I --> L[rsa_encryption.create_page]
+    I --> M[hash_module.create_page]
+    I --> N[hash_crack_module.create_page]
+    I --> O[arcade.create_page]
+    J & K & L & M & N & O --> P[Add to nav_list and stack]
+    P --> Q[Select first tool]
+    Q --> R[window.show]
 ```
 
 ### Tool Execution Flow (Generic)
@@ -221,9 +296,10 @@ flowchart TD
     E --> F[Validate input]
     F -- Invalid --> G[set_status with error]
     F -- Valid --> H[clear_output]
-    H --> I[Execute module logic]
-    I --> J[append_output with results]
-    J --> K[set_status 'Done']
+    H --> I[Call api_client]
+    I -- ConnectionError --> J[Show backend error]
+    I -- OK --> K[append_output with results]
+    K --> L[set_status 'Done']
 ```
 
 ### RSA Encryption Flow (Threaded)
@@ -232,19 +308,14 @@ flowchart TD
 flowchart TD
     A[User clicks Encrypt] --> B[Validate input]
     B -- Invalid --> C[Show error]
-    B -- Valid --> D{Binary exists?}
-    D -- No --> E[Compile with gcc]
-    E -- Fail --> F[Show compile error]
-    E -- OK --> G[Start RSAWorker thread]
-    D -- Yes --> G
-    G --> H[Disable button]
-    H --> I[subprocess.run in background]
-    I -- Success --> J[output_ready signal]
-    I -- Error --> K[error_occurred signal]
-    I -- Timeout --> K
-    J --> L[Display output lines]
-    K --> M[Display error]
-    L & M --> N[Re-enable button]
+    B -- Valid --> D[Start RSAWorker thread]
+    D --> E[Disable button]
+    E --> F[api_client RSA call]
+    F -- Success --> G[output_ready signal]
+    F -- Error --> H[error_occurred signal]
+    G --> I[Display output]
+    H --> J[Display error]
+    I & J --> K[Re-enable button]
 ```
 
 ### Ask Gilfi Chat Flow
@@ -268,14 +339,30 @@ flowchart TD
     N --> L
 ```
 
+### Survive the Cracker Flow (Arcade)
+
+```mermaid
+flowchart TD
+    A[User types password] --> B[Start CrackerWorker thread]
+    B --> C[Hash password locally with SHA-256]
+    C --> D[api_client.hash_crack]
+    D -- Found in wordlist --> E[done signal: plaintext]
+    D -- Not found --> F[done signal: None]
+    D -- Backend offline --> G[error signal]
+    E --> H[Show 'CRACKED' result]
+    F --> I[Show 'SURVIVED' result]
+    G --> J[Show backend error]
+```
+
 ## Module Interface
 
-Every tool module follows the same pattern. To add a new module:
+Every standard tool module follows the same pattern. To add a new module:
 
 **1. Create** `modules/your_module.py`:
 
 ```python
 from ui.toolpage import ToolPage
+import api_client
 
 def create_page():
     page = ToolPage(
@@ -296,9 +383,12 @@ def run(page):
     page.clear_output()
     page.set_status("Working ...")
 
-    # do stuff
-    page.append_output(f"Result: {value}")
-    page.set_status("Done")
+    try:
+        result = api_client.your_endpoint(value)
+        page.append_output(f"Result: {result}")
+        page.set_status("Done")
+    except ConnectionError as e:
+        page.set_status(f"Backend not available: {e}", error=True)
 ```
 
 **2. Register** in `ui/mainwindow.py`:
@@ -324,16 +414,36 @@ tools = [
 | `append_output(text)` | Append a line to output |
 | `set_status(text, error=False)` | Show status message (green or red) |
 
+For non-standard pages (such as the Arcade), modules can return any `QWidget` subclass directly from `create_page()` instead of a `ToolPage`.
+
+## Cross-Module Communication
+
+The Arcade module forwards data into other tool pages. For example, the Hash Hunter game can send its current target hash into the Hash Module or Hash Crack Module with one click.
+
+This is implemented in `modules/arcade.py` via two helpers that walk up to the `MainWindow` and access the navigation and stack:
+
+```python
+def _send_to_module(widget, module_name, field_values, auto_run=False):
+    """Switch to the target tool page, prefill its fields,
+    and optionally trigger its run button."""
+    mw = widget.window()
+    # find nav entry by name, prefill ToolPage.fields, switch tab,
+    # optionally call page.handle_run()
+```
+
+This keeps modules independent (no direct imports of one another) while still allowing them to cooperate. If a target module is missing, the call fails gracefully and shows a status-bar message.
+
 ## Threading Model
 
 Long-running operations use `QThread` to keep the GUI responsive:
 
 | Operation | Thread Class | Communication |
 |---|---|---|
-| RSA encryption (C binary) | `RSAWorker` | `output_ready`, `error_occurred`, `finished_ok` signals |
-| Ask Gilfi chat (Ollama API) | `ChatWorker` | `token_received`, `error_occurred`, `finished` signals |
+| RSA encryption / decryption | `RSAWorker` | `output_ready`, `error_occurred`, `finished_ok` |
+| Ask Gilfi chat (Ollama API) | `ChatWorker` | `token_received`, `error_occurred`, `finished` |
+| Hash cracking (Arcade) | `CrackerWorker` | `done`, `error` |
 
-Both workers follow the same pattern: the main thread creates the worker, connects signals to slots, and starts the thread. The worker emits signals that update the UI from the main thread (Qt requirement).
+All workers follow the same pattern: the main thread creates the worker, connects signals to slots, and starts the thread. The worker emits signals that update the UI from the main thread (Qt requirement - widgets must only be touched from the thread that created them).
 
 ```
 Main Thread                    Worker Thread
@@ -364,17 +474,4 @@ The application uses a global QSS stylesheet defined in `ui/style.py`. The theme
 | Muted text | Gray-purple | `#8a8aa0` |
 | Input background | Near black | `#0f0f23` |
 
-All widgets are styled via `objectName` selectors (e.g. `#btnRun`, `#navList`, `#chatToggle`) to keep styles scoped and avoid conflicts.
-
-## Future: API Client Migration
-
-When the backend is containerized, the modules will switch from direct imports / subprocess calls to HTTP requests via a central `GilfiAPIClient`:
-
-```
-Current:    module → hash_lib (direct import)
-            module → rsa-module (subprocess)
-
-Future:     module → GilfiAPIClient → Backend API (HTTP)
-```
-
-The `ToolPage` interface stays the same. Only the `run()` functions inside each module need to be updated to use the API client instead of local calls.
+Widgets are styled via `objectName` selectors (e.g. `#btnRun`, `#navList`, `#chatToggle`) to keep styles scoped and avoid conflicts. The Arcade module ships its own scoped styles for the level-picker, secondary action buttons, and inner tab bar to stay visually consistent with the rest of the GUI without depending on objects defined by the global stylesheet.

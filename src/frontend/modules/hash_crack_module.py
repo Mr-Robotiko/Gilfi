@@ -34,12 +34,9 @@ def run(page):
 def _run_crack(page, hash_value, algo):
     page.set_status("Cracking ... (this may take a while)")
     
-    # Use backend path for wordlist
-    wordlist_path = "/app/data/wordlist/rockyou.txt"
-    
     try:
-        # Use API client instead of direct import
-        result = api_client.hash_crack(hash_value, wordlist_path, algo)
+        # Use API client with correct parameter order: hash_value, hash_type, wordlist
+        result = api_client.hash_crack(hash_value, algo, 'common')
         
         if result is None:
             page.append_output(f"Hash:      {hash_value}")

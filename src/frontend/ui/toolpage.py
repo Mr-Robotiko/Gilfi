@@ -3,9 +3,12 @@ Gilfi - ToolPage
 Reusable widget for each tool module.
 """
 
+from html import escape
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QTextEdit, QGroupBox, QGridLayout
+    QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox,
+    QLayoutItem, QWidgetItem, QComboBox
 )
 from PyQt6.QtCore import Qt
 
@@ -17,10 +20,13 @@ class ToolPage(QWidget):
         self.title = title
         self.description = description
         self.fields = {}
+        self.isSplit = {}
         self.field_row = 0
         self.on_run = None
 
         self.setup_ui()
+
+        self.initialCollumnCount = self.input_grid.columnCount() + 1
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -78,7 +84,7 @@ class ToolPage(QWidget):
 
         layout.addWidget(self.output_group, stretch=1)
 
-    def add_field(self, label, placeholder=""):
+    def add_field(self, label, placeholder="", span=1):
         lbl = QLabel(label)
         lbl.setStyleSheet("color: #8a8aa0; font-size: 12px;")
 
@@ -87,8 +93,76 @@ class ToolPage(QWidget):
 
         self.fields[label] = line_edit
         self.input_grid.addWidget(lbl, self.field_row, 0, Qt.AlignmentFlag.AlignRight)
-        self.input_grid.addWidget(line_edit, self.field_row, 1)
+        self.input_grid.addWidget(line_edit, self.field_row, 1, 1, span)
         self.field_row += 1
+
+    def add_field_with_checkbox(self, label, placeholder="", checkbox_placeholder="", checkbox_connect_to=None):
+        lbl = QLabel(label)
+        lbl.setStyleSheet("color: #8a8aa0; font-size: 12px;")
+
+        line_edit = QLineEdit()
+        line_edit.setPlaceholderText(placeholder)
+
+        checkbox = QCheckBox()
+        checkbox.setText(checkbox_placeholder)
+        checkbox.setStyleSheet("color: #8a8aa0; font-size: 12px;")
+        checkbox.stateChanged.connect(checkbox_connect_to)
+
+        self.fields[label] = line_edit
+        self.isSplit[label] = False
+        self.input_grid.addWidget(lbl, self.field_row, 0, Qt.AlignmentFlag.AlignRight)
+        self.input_grid.addWidget(line_edit, self.field_row, 1)
+        self.input_grid.addWidget(checkbox, self.field_row, 2)
+        self.field_row += 1
+
+    def add_dropdown(self, row, col, options, label):
+        combo_box = QComboBox()
+        combo_box.addItems(options)
+        self.input_grid.addWidget(combo_box, row, col)
+        self.fields[label] = combo_box
+
+    def split_input_field(self, line_edit_name):
+        original_line_edit = self.fields[line_edit_name]
+        idx = self.input_grid.indexOf(original_line_edit)
+        row, column, _, _ = self.input_grid.getItemPosition(idx)
+
+        new_line_edit = QLineEdit()
+        new_line_edit.setPlaceholderText(original_line_edit.placeholderText())
+
+        self.fields[line_edit_name + "2"] = new_line_edit
+
+        # Shift everything after first line_edit to the right
+        for col in range(column+1, self.initialCollumnCount):
+            item = self.input_grid.itemAtPosition(row, col)
+            self.input_grid.addWidget(new_line_edit, row, col)
+            self.input_grid.addWidget(item.widget(), row, col+1)
+
+        # Adjust the row span of the objects
+        for row in range(self.input_grid.rowCount()):
+            for col in range(self.initialCollumnCount):
+                item = self.input_grid.itemAtPosition(row, col)
+
+    def undo_split_input_field(self, line_edit_name):
+        original_line_edit = self.fields[line_edit_name]
+        idx = self.input_grid.indexOf(original_line_edit)
+        row, column, _, _ = self.input_grid.getItemPosition(idx)
+
+        for col in range(column+1, self.initialCollumnCount):
+            item_before = self.input_grid.itemAtPosition(row, col)
+            item = self.input_grid.itemAtPosition(row, col+1)
+            
+            self.input_grid.removeWidget(item_before.widget())
+            self.fields.pop((line_edit_name + "2"), None)
+
+            self.input_grid.addWidget(item.widget(), row, col)
+
+    def handle_split(self, line_edit_name):
+        if self.isSplit[line_edit_name]:
+            self.undo_split_input_field(line_edit_name)
+            self.isSplit[line_edit_name] = False
+        else:
+            self.split_input_field(line_edit_name)
+            self.isSplit[line_edit_name] = True
 
     def get_input(self, label):
         widget = self.fields.get(label)
@@ -97,7 +171,10 @@ class ToolPage(QWidget):
         return ""
 
     def append_output(self, text):
-        self.output_text.append(text)
+        # QTextEdit.append() interprets HTML when the text looks like markup.
+        # Escape by default so attacker- or backend-controlled strings can't
+        # inject tags (e.g. <img src=...> for tracking).
+        self.output_text.append(escape(str(text)))
 
     def clear_output(self):
         self.output_text.clear()

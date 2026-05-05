@@ -7,6 +7,7 @@ import json
 import sys
 import os
 import importlib.util
+from html import escape
 
 # Set custom Ollama port BEFORE importing the module to avoid Docker port conflict
 os.environ['OLLAMA_HOST'] = '127.0.0.1:11435'
@@ -252,7 +253,7 @@ class ChatWidget(QWidget):
             self.status_label.setStyleSheet("color: #f06b78; font-size: 10px;")
             self.chat_display.append(
                 f"<span style='color:#f06b78;'>✗ Failed to start Ollama:</span><br>"
-                f"<span style='color:#555570;'>{message}</span><br><br>"
+                f"<span style='color:#555570;'>{escape(message)}</span><br><br>"
                 "<span style='color:#555570;'><b>Troubleshooting:</b></span><br>"
                 "<span style='color:#555570;'>1. Check if port 11435 is available</span><br>"
                 "<span style='color:#555570;'>2. Ensure Ollama binary has execute permissions</span><br>"
@@ -273,7 +274,9 @@ class ChatWidget(QWidget):
         if self.worker and self.worker.isRunning():
             return
 
-        self.chat_display.append(f"<b style='color:#53a8d8;'>You:</b> {prompt}")
+        # User input must be HTML-escaped before being inserted into the
+        # rich-text QTextEdit; otherwise <img src=...> & co. fire.
+        self.chat_display.append(f"<b style='color:#53a8d8;'>You:</b> {escape(prompt)}")
         self.input_field.clear()
         self.chat_display.append("<b style='color:#4ade80;'>Gilfi:</b> ")
         self.btn_send.setEnabled(False)
@@ -292,7 +295,7 @@ class ChatWidget(QWidget):
         self.chat_display.ensureCursorVisible()
 
     def on_error(self, msg):
-        self.chat_display.append(f"<span style='color:#f06b78;'>{msg}</span>")
+        self.chat_display.append(f"<span style='color:#f06b78;'>{escape(msg)}</span>")
 
     def on_finished(self):
         self.btn_send.setEnabled(True)

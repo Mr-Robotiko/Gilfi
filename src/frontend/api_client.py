@@ -10,15 +10,16 @@ from typing import Optional, Dict, Any, List
 class GilfiAPIClient:
     """Client for communicating with Gilfi backend API"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", timeout: int = 30):
         """
         Initialize API client
         
         Args:
             base_url: Base URL of the backend API (default: http://localhost:8000)
+            timeout: Request timeout in seconds (default: 30)
         """
         self.base_url = base_url.rstrip('/')
-        self.timeout = 30  # seconds
+        self.timeout = timeout
     
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """
@@ -69,10 +70,29 @@ class GilfiAPIClient:
             Dictionary of available modules and their endpoints
         """
         return self._request('GET', '/api/modules')
+
+    # Networking Methods
+    def scan_ports(self, target: str, scan_range: list, ip_type="IPV4", connection_type="BOTH") -> Dict[str, Any]:
+        return self._request('POST', '/api/networking/port_scanner', json={
+            'target': target,
+            'scan_range': scan_range,
+            'ip_type': ip_type,
+            'connection_type': connection_type
+        })
+    
+    def get_modules(self) -> List[str]:
+        """
+        Get list of available module names (convenience method for tests)
+        
+        Returns:
+            List of module names
+        """
+        result = self._request('GET', '/api/modules')
+        return result.get('modules', [])
     
     # Hash Module Methods
     
-    def hash_generate(self, text: str, algorithm: str = 'sha256') -> Dict[str, Any]:
+    def hash_generate(self, text: str, algorithm: str = 'sha256') -> str:
         """
         Generate hash from text
         
@@ -81,14 +101,15 @@ class GilfiAPIClient:
             algorithm: Hash algorithm (default: sha256)
             
         Returns:
-            Dictionary with hash result
+            Hash string
         """
-        return self._request('POST', '/api/hash/generate', json={
+        result = self._request('POST', '/api/hash/generate', json={
             'text': text,
             'algorithm': algorithm
         })
+        return result.get('hash', '')
     
-    def hash_identify(self, hash_value: str) -> Dict[str, Any]:
+    def hash_identify(self, hash_value: str) -> List[str]:
         """
         Identify hash type
         
@@ -96,45 +117,48 @@ class GilfiAPIClient:
             hash_value: Hash string to identify
             
         Returns:
-            Dictionary with possible hash types
+            List of possible hash types
         """
-        return self._request('POST', '/api/hash/identify', json={
+        result = self._request('POST', '/api/hash/identify', json={
             'hash': hash_value
         })
+        return result.get('possible_types', [])
     
-    def hash_crack(self, hash_value: str, wordlist: str = '/app/data/wordlist/rockyou.txt', 
-                   algorithm: str = 'sha256') -> Dict[str, Any]:
+    def hash_crack(self, hash_value: str, hash_type: str, wordlist: str = 'common') -> Optional[str]:
         """
         Crack hash using wordlist
         
         Args:
             hash_value: Hash to crack
-            wordlist: Path to wordlist file (default: rockyou.txt)
-            algorithm: Hash algorithm (default: sha256)
+            hash_type: Hash algorithm type (md5, sha256, etc.)
+            wordlist: Wordlist name (default: common)
             
         Returns:
-            Dictionary with cracking result
+            Cracked plaintext if found, None otherwise
         """
-        return self._request('POST', '/api/hash/crack', json={
+        result = self._request('POST', '/api/hash/crack', json={
             'hash': hash_value,
-            'wordlist': wordlist,
-            'algorithm': algorithm
+            'hash_type': hash_type,
+            'wordlist': wordlist
         })
+        return result.get('result')
     
     # RSA Module Methods
     
-    def rsa_encrypt(self, plaintext: int) -> Dict[str, Any]:
+    def rsa_encrypt(self, text: str, operation: str = 'encrypt') -> Dict[str, Any]:
         """
-        Perform RSA encryption
+        Perform RSA encryption/decryption
         
         Args:
-            plaintext: Number to encrypt
+            text: Text to encrypt/decrypt
+            operation: Operation type (encrypt/decrypt)
             
         Returns:
-            Dictionary with RSA encryption results
+            Dictionary with RSA operation results
         """
         return self._request('POST', '/api/rsa/encrypt', json={
-            'plaintext': plaintext
+            'text': text,
+            'operation': operation
         })
     
     # Ask-Gilfi Methods
@@ -175,31 +199,28 @@ def get_client(base_url: str = "http://localhost:8000") -> GilfiAPIClient:
 
 
 # Convenience functions for direct use
+def scan_ports(target: str, scan_range: list, ip_type="IPV4", connection_type="BOTH") -> Dict[int, Dict[str, int]]:
+    return get_client().scan_ports(target, scan_range, ip_type=ip_type,
+                                   connection_type=connection_type)
 
 def hash_generate(text: str, algorithm: str = 'sha256') -> str:
     """Generate hash (returns just the hash string)"""
-    result = get_client().hash_generate(text, algorithm)
-    return result.get('hash', '')
+    return get_client().hash_generate(text, algorithm)
 
 
 def hash_identify(hash_value: str) -> List[str]:
     """Identify hash type (returns list of possible types)"""
-    result = get_client().hash_identify(hash_value)
-    return result.get('possible_types', [])
+    return get_client().hash_identify(hash_value)
 
 
-def hash_crack(hash_value: str, wordlist: str = '/app/data/wordlist/rockyou.txt', 
-               algorithm: str = 'sha256') -> Optional[str]:
+def hash_crack(hash_value: str, hash_type: str, wordlist: str = 'common') -> Optional[str]:
     """Crack hash (returns plaintext if found, None otherwise)"""
-    result = get_client().hash_crack(hash_value, wordlist, algorithm)
-    if result.get('cracked'):
-        return result.get('plaintext')
-    return None
+    return get_client().hash_crack(hash_value, hash_type, wordlist)
 
 
-def rsa_encrypt(plaintext: int) -> Dict[str, Any]:
+def rsa_encrypt(text: str, operation: str = 'encrypt') -> Dict[str, Any]:
     """Perform RSA encryption"""
-    return get_client().rsa_encrypt(plaintext)
+    return get_client().rsa_encrypt(text, operation)
 
 
 def askgilfi_query(prompt: str) -> str:
@@ -224,14 +245,21 @@ if __name__ == '__main__':
         # List modules
         print("\n2. Available Modules:")
         modules = client.list_modules()
-        for name, info in modules.get('modules', {}).items():
-            print(f"   - {info['name']}: {info['status']}")
+        # Use modules_details for dict format, fallback to modules if it's a dict
+        modules_dict = modules.get('modules_details', modules.get('modules', {}))
+        if isinstance(modules_dict, dict):
+            for name, info in modules_dict.items():
+                print(f"   - {info['name']}: {info['status']}")
+        else:
+            # If modules is a list, just print the names
+            for name in modules.get('modules', []):
+                print(f"   - {name}")
         
         # Test hash generation
         print("\n3. Hash Generation:")
-        result = client.hash_generate("test", "sha256")
-        print(f"   Input: {result.get('input')}")
-        print(f"   Hash: {result.get('hash')}")
+        hash_result = client.hash_generate("test", "sha256")
+        print(f"   Input: test")
+        print(f"   Hash: {hash_result}")
         
         print("\n✓ API client working correctly!")
         
