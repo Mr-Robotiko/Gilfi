@@ -14,4 +14,9 @@ class Resolver(object):
     def resolve_hosts(self, hosts: list):
         ips = []
         for host in hosts:
-            ips.append(resolve_host(host))
+            # Bug fix: was calling bare `resolve_host(host)` (NameError);
+            # must be `self.resolve_host(host)`.
+            ips.append(self.resolve_host(host))
+        # Bug fix: was missing a return statement, so the method always
+        # returned None instead of the populated list.
+        return ips

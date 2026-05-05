@@ -2,15 +2,11 @@ import networking_lib.shared_info
 import socket
 import json
 
-# TODO:
-#   - Detangle functions to use self instead of return
-#   - Use return for error handeling
-
 class Scanner():
     '''
     Scanner class with following variables and functions:
     * Private:
-        * __MAX_PORT_NR:            Maximum number of ports
+        * __MAX_PORT_NR:            Maximum number of ports (65535, the highest valid TCP/UDP port)
         * __PROTOCOLL_TRANSLATION:  Dict for looking up used SocketKind names
         * __ip:                     IP to scan
         * __scanned_ports:          Dictionary of all scanned ports with the key being the ports and the value being 
@@ -19,8 +15,11 @@ class Scanner():
         * __shared_info:            Shared info object for accessing shared info between networking modules
         * __range_input:            List of length 1 or 2 of the ports to be scanned
     '''
-    __MAX_PORT_NR = 64738
-    __PROTOCOLL_TRANSLATION = {1: "TCP", 2: "UDP"}
+    # Bug fix: was 64738, which incorrectly excluded valid ports 64739–65535.
+    __MAX_PORT_NR = 65535
+    # Bug fix: use SocketKind constants as keys so the lookup works correctly on
+    # all platforms (some platforms encode extra flags in sock.type).
+    __PROTOCOLL_TRANSLATION = {socket.SOCK_STREAM: "TCP", socket.SOCK_DGRAM: "UDP"}
 
     def __init__(self, shared_info, range_input=[0], address_family="IPV4", connection_type="BOTH"):
         self.__ip = '127.0.0.1'
@@ -47,12 +46,16 @@ class Scanner():
                 return range(1, self.__MAX_PORT_NR+1)
             return range(range_input[0], range_input[0]+1)
 
-        # Check if range is valid
-        if len(range_input) == 2 and (range_input[1] - range_input[0]) > 1:
+        # Bug fix: was `> 1`, which incorrectly rejected valid adjacent-port
+        # ranges such as [80, 81] (difference == 1).  The correct guard is
+        # `>= 1` (or equivalently `range_input[1] >= range_input[0]`).
+        if len(range_input) == 2 and (range_input[1] - range_input[0]) >= 1:
             return range(range_input[0], range_input[1]+1)
 
-        print("Wrong usage of function, please consult the documentation")
-        return range(0)
+        raise ValueError(
+            f"Invalid range_input {range_input!r}: expected a 1- or 2-element list "
+            f"where the second value is >= the first."
+        )
             
     
     def __parse_address_type(self, address_family) -> socket.AddressFamily:
@@ -74,8 +77,12 @@ class Scanner():
             self.__ip = self.__shared_info.ipv6_target
             return socket.AF_INET6
 
-        print("Please enter a supported address_family [IPV4/IPV6]")
-        return -1
+        # Bug fix: was silently returning -1, which caused a cryptic OSError
+        # later when trying to create a socket.  Raise a clear ValueError instead.
+        raise ValueError(
+            f"Unsupported address_family {address_family!r}. "
+            "Please use 'IPV4' or 'IPV6'."
+        )
 
     def __parse_connection_type(self, connection_type) -> list[socket.SocketKind]:
         '''
@@ -96,30 +103,42 @@ class Scanner():
         if str.upper(connection_type) == "UDP":
             return [socket.SOCK_DGRAM]
 
-        print("Please enter a supported connection_type [TCP/UDP/BOTH]")
-        return -1
-
-    def __socket_factory(self) -> socket.socket:
-        '''
-        Generator for opening sockets.
-
-        :return: Generator object to iterate through sockets depending on the scan type (TCP/UDP/BOTH)
-        :rtype: generator
-        '''
-        for protocoll in self.__connection_type:
-            yield socket.socket(self.__address_family, protocoll)
+        # Bug fix: was silently returning -1, which caused a cryptic TypeError
+        # ("'int' object is not iterable") when the value was later iterated in
+        # __socket_factory.  Raise a clear ValueError instead.
+        raise ValueError(
+            f"Unsupported connection_type {connection_type!r}. "
+            "Please use 'TCP', 'UDP', or 'BOTH'."
+        )
 
     def __scan(self) -> None:
         '''
         Performs scan over the given ip, protocoll/s and port range.
         Modifies __scanned_ports accordingly.
+
+        Bug fixes applied here:
+        * A TCP socket that has been successfully connected cannot be reused for
+          a second connect() call on a different port.  A fresh socket must be
+          created for every port.
+        * Sockets were never closed, leaking OS file descriptors.  Each socket
+          is now closed in a finally block immediately after use.
+        * __PROTOCOLL_TRANSLATION is now keyed by SocketKind (not raw int) so
+          the lookup is correct on all platforms.
         '''
 
-        for sock in self.__socket_factory():
+        for protocoll in self.__connection_type:
             port_range = self.__parse_range(self.__range_input)
-            current_protocoll = self.__PROTOCOLL_TRANSLATION[sock.type]
+            current_protocoll = self.__PROTOCOLL_TRANSLATION[protocoll]
             for port in port_range:
-                status = sock.connect_ex((self.__ip, port))
+                # Bug fix: create a new socket per port.  Reusing one socket
+                # across all ports fails for TCP because a connected socket
+                # cannot reconnect to a different destination.
+                sock = socket.socket(self.__address_family, protocoll)
+                try:
+                    status = sock.connect_ex((self.__ip, port))
+                finally:
+                    # Bug fix: always close the socket to avoid file-descriptor leaks.
+                    sock.close()
                 if port in self.__scanned_ports:
                     self.__scanned_ports[port][current_protocoll] = status
                 else:
@@ -135,12 +154,12 @@ class Scanner():
         :type path: str
         '''
         port_range = self.__parse_range(self.__range_input)
-        f = open(path)
-        full_file = json.loads(f.read())
+        # Bug fix: the file was opened but never closed, leaking the file
+        # descriptor.  Use a `with` statement to guarantee closure.
+        with open(path) as f:
+            full_file = json.loads(f.read())
         for port in port_range:
-            #print(str(f"{port}" in full_file['ports']) + " and " + str(port in self.__scanned_ports))
             if port in self.__scanned_ports and f"{port}" in full_file['ports']:
-                print(f"add description to port {port}")
                 description = full_file['ports'][f"{port}"]
                 # TODO: Handle double descriptions better
                 if type(description) == list:

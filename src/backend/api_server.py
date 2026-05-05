@@ -92,10 +92,16 @@ def scan_ports():
         if not scan_range:
             return jsonify({'error': 'Scan range is required'}), 400
 
+        # Bug fix: connection_type defaults to None when the key is absent,
+        # which causes str.upper(None) to raise a TypeError inside Scanner.
+        if connection_type is None:
+            connection_type = 'BOTH'
+
         info.set_ip(target)
         scanner = Scanner(info, scan_range, connection_type=connection_type)
         scanner.start_scan("/app/data/ports/ports.json")
-        return scanner.get_all_ports()
+        # Bug fix: return a proper Flask JSON response instead of a raw dict.
+        return jsonify(scanner.get_all_ports())
 
     except Exception as e:
         print(e)
