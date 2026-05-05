@@ -199,7 +199,7 @@ def get_client(base_url: str = "http://localhost:8000") -> GilfiAPIClient:
 
 
 # Convenience functions for direct use
-def scan_ports(target: str, scan_range: list, ip_type="IPV4", connection_type="BOTH") -> Dict(int, Dict(str, int | List(str, str))):
+def scan_ports(target: str, scan_range: list, ip_type="IPV4", connection_type="BOTH") -> Dict[int, Dict[str, int]]:
     result = get_client().scan_ports(target, scan_range)
     return result
 
