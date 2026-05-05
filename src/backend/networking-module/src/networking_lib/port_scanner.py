@@ -6,8 +6,8 @@ class Scanner():
     '''
     Scanner class with following variables and functions:
     * Private:
-        * __MAX_PORT_NR:            Maximum number of ports (65535, the highest valid TCP/UDP port)
-        * __PROTOCOLL_TRANSLATION:  Dict for looking up used SocketKind names
+        * __MAX_PORT_NR:           Maximum number of ports (65535, the highest valid TCP/UDP port)
+        * __PROTOCOL_TRANSLATION:  Dict for looking up used SocketKind names
         * __ip:                     IP to scan
         * __scanned_ports:          Dictionary of all scanned ports with the key being the ports and the value being 
                                     another dictionary with the key being "UDP" and/or "TCP" and value being their respective status
@@ -19,7 +19,7 @@ class Scanner():
     __MAX_PORT_NR = 65535
     # Bug fix: use SocketKind constants as keys so the lookup works correctly on
     # all platforms (some platforms encode extra flags in sock.type).
-    __PROTOCOLL_TRANSLATION = {socket.SOCK_STREAM: "TCP", socket.SOCK_DGRAM: "UDP"}
+    __PROTOCOL_TRANSLATION = {socket.SOCK_STREAM: "TCP", socket.SOCK_DGRAM: "UDP"}
 
     def __init__(self, shared_info, range_input=[0], address_family="IPV4", connection_type="BOTH"):
         self.__ip = '127.0.0.1'
@@ -126,23 +126,23 @@ class Scanner():
           the lookup is correct on all platforms.
         '''
 
-        for protocoll in self.__connection_type:
+        for protocol in self.__connection_type:
             port_range = self.__parse_range(self.__range_input)
-            current_protocoll = self.__PROTOCOLL_TRANSLATION[protocoll]
+            current_protocol = self.__PROTOCOL_TRANSLATION[protocol]
             for port in port_range:
                 # Bug fix: create a new socket per port.  Reusing one socket
                 # across all ports fails for TCP because a connected socket
                 # cannot reconnect to a different destination.
-                sock = socket.socket(self.__address_family, protocoll)
+                sock = socket.socket(self.__address_family, protocol)
                 try:
                     status = sock.connect_ex((self.__ip, port))
                 finally:
                     # Bug fix: always close the socket to avoid file-descriptor leaks.
                     sock.close()
                 if port in self.__scanned_ports:
-                    self.__scanned_ports[port][current_protocoll] = status
+                    self.__scanned_ports[port][current_protocol] = status
                 else:
-                    self.__scanned_ports[port] = {current_protocoll: status}
+                    self.__scanned_ports[port] = {current_protocol: status}
 
     def __add_descriptions(self, path) -> None:
         '''

@@ -177,7 +177,7 @@ class TestScanSocketLifecycle(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Bug 5 – __PROTOCOLL_TRANSLATION keyed by raw ints instead of SocketKind
+# Bug 5 – __PROTOCOL_TRANSLATION keyed by raw ints instead of SocketKind
 # ---------------------------------------------------------------------------
 
 class TestProtocolTranslation(unittest.TestCase):
@@ -186,16 +186,16 @@ class TestProtocolTranslation(unittest.TestCase):
     SocketKind constants themselves."""
 
     def test_keys_are_socket_kind_constants(self):
-        translation = Scanner._Scanner__PROTOCOLL_TRANSLATION
+        translation = Scanner._Scanner__PROTOCOL_TRANSLATION
         self.assertIn(socket.SOCK_STREAM, translation)
         self.assertIn(socket.SOCK_DGRAM, translation)
 
     def test_tcp_maps_correctly(self):
-        translation = Scanner._Scanner__PROTOCOLL_TRANSLATION
+        translation = Scanner._Scanner__PROTOCOL_TRANSLATION
         self.assertEqual(translation[socket.SOCK_STREAM], "TCP")
 
     def test_udp_maps_correctly(self):
-        translation = Scanner._Scanner__PROTOCOLL_TRANSLATION
+        translation = Scanner._Scanner__PROTOCOL_TRANSLATION
         self.assertEqual(translation[socket.SOCK_DGRAM], "UDP")
 
     def test_scan_records_correct_protocol_label(self):
