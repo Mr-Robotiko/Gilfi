@@ -7,10 +7,12 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QLabel, QSplitter, QStatusBar,
     QFrame, QPushButton, QDockWidget
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
-from modules import network_scanner, port_scanner, rsa_encryption, hash_module, hash_crack_module, arcade
+from modules import network_scanner, port_scanner, rsa_encryption, hash_module, hash_crack_module, password_analyzer, arcade
+from ui.animated_logo import AnimatedLogo
 from ui.chatwidget import ChatWidget
+from ui.splash_overlay import SplashOverlay
 
 
 class MainWindow(QMainWindow):
@@ -20,6 +22,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Gilfi")
         self.setMinimumSize(900, 560)
         self.resize(1000, 650)
+
+        self._splash = None
+        self._splash_started = False
 
         self.setup_menubar()
         self.setup_central()
@@ -57,18 +62,23 @@ class MainWindow(QMainWindow):
         nav_layout.setContentsMargins(0, 0, 0, 0)
         nav_layout.setSpacing(0)
 
-        title = QLabel("  GILFI")
-        title.setStyleSheet(
-            "font-size: 20px; font-weight: bold; color: #53a8d8;"
-            "padding: 14px 10px 2px 10px; letter-spacing: 2px;"
-        )
-        nav_layout.addWidget(title)
+        nav_layout.addSpacing(14)
 
-        subtitle = QLabel("  Security Tool Suite")
+        self.logo = AnimatedLogo()
+        # Keep the layout slot reserved while the logo is hidden during the
+        # startup splash, so when the splash hands over there's no jump.
+        _sp = self.logo.sizePolicy()
+        _sp.setRetainSizeWhenHidden(True)
+        self.logo.setSizePolicy(_sp)
+        self.logo.hide()  # stays hidden until the splash hands over to it
+        nav_layout.addWidget(self.logo, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        subtitle = QLabel("Security Tool Suite")
         subtitle.setStyleSheet(
-            "color: #555570; font-size: 10px;"
-            "padding: 0px 10px 10px 10px;"
+            "color: #8a8aa0; font-size: 10px; font-weight: bold;"
+            "padding: 4px 10px 12px 10px; letter-spacing: 2px;"
         )
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         nav_layout.addWidget(subtitle)
 
         line = QFrame()
@@ -136,11 +146,12 @@ class MainWindow(QMainWindow):
     def register_tools(self):
         """add new tools here"""
         tools = [
-            ("Network Scanner",  network_scanner.create_page()),
+            #("Network Scanner",  network_scanner.create_page()), In development
             ("Port Scanner",     port_scanner.create_page()),
             ("RSA Encryption",   rsa_encryption.create_page()),
             ("Hash Module",      hash_module.create_page()),
             ("Hash Crack Module", hash_crack_module.create_page()),
+            ("Password Analyzer", password_analyzer.create_page()),
             ("Arcade",           arcade.create_page()),
         ]
 
@@ -151,3 +162,26 @@ class MainWindow(QMainWindow):
     def add_tool(self, name, page):
         self.nav_list.addItem(name)
         self.stack.addWidget(page)
+
+    # ------------------------------------------------------------------
+    # Startup splash overlay
+    # ------------------------------------------------------------------
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._splash_started:
+            self._splash_started = True
+            self._splash = SplashOverlay(self, self.logo)
+            self._splash.destroyed.connect(self._on_splash_destroyed)
+            self._splash.start()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._splash is not None:
+            self._splash.setGeometry(self.rect())
+
+    def _on_splash_destroyed(self, *_):
+        self._splash = None
+        # Defensive: if the splash never reached _finish (e.g. the window was
+        # closed mid-splash), make sure the static logo is visible afterwards.
+        if not self.logo.isVisible():
+            self.logo.show()
