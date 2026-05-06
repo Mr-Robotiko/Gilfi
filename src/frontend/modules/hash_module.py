@@ -23,7 +23,7 @@ def create_page():
 def run(page):
     text = page.get_input("Input")
     algo = page.get_input("Algorithm") or "sha256"
-    mode = page.get_input("Mode").lower() or "hash"
+    mode = (page.get_input("Mode") or "hash").lower()
 
     if not text:
         page.set_status("Please enter text", error=True)
