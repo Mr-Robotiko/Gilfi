@@ -1,111 +1,36 @@
-# Password Analyzer Module - Comprehensive Documentation
+# Password Analyzer Module
 
-## Overview
+Comprehensive password strength analysis and secure password generation module for Gilfi.
 
-The Password Analyzer Module is a Python package that provides comprehensive password strength analysis using regex patterns, scoring algorithms, and security best practices. It helps users create stronger passwords by identifying weaknesses and providing actionable recommendations.
+## Features
 
-## Table of Contents
+### Password Analysis
+- **Strength Levels**: VERY_WEAK, WEAK, MODERATE, STRONG, VERY_STRONG
+- **Scoring System**: 0-100 points based on multiple security criteria
+- **Character Analysis**: Lowercase, uppercase, digits, special characters
+- **Pattern Detection**: Consecutive chars, sequential numbers/letters, common patterns
+- **Common Password Check**: Database of 20+ commonly used weak passwords
+- **Entropy Calculation**: Randomness and unpredictability assessment
+- **Actionable Suggestions**: Specific recommendations for improvement
 
-1. [Installation](#installation)
-2. [Features](#features)
-3. [Architecture](#architecture)
-4. [Usage Examples](#usage-examples)
-5. [API Reference](#api-reference)
-6. [Analysis Criteria](#analysis-criteria)
-7. [Testing](#testing)
-8. [Best Practices](#best-practices)
-
----
+### Password Generation
+- **Cryptographically Secure**: Uses Python's `secrets` module
+- **Customizable Length**: 8-128 characters
+- **Configurable Character Sets**: Lowercase, uppercase, digits, special characters
+- **Ambiguous Character Exclusion**: Optionally excludes 0/O, 1/l/I for clarity
+- **Character Set Diversity**: Ensures at least one character from each selected set
+- **Automatic Analysis**: Generated passwords are automatically analyzed for strength
 
 ## Installation
-
-### Development Installation
 
 ```bash
 cd src/backend/password-analyzer-module
 pip install -e .
 ```
 
-### Production Installation
+## Usage
 
-```bash
-pip install password-lib
-```
-
-### Dependencies
-
-- Python 3.8+
-- No external dependencies (uses built-in `re` module)
-
----
-
-## Features
-
-### Core Capabilities
-
-1. **Multi-Criteria Analysis**
-   - Length evaluation
-   - Character variety (lowercase, uppercase, digits, special)
-   - Pattern detection (sequential, repetitive)
-   - Common password checking
-   - Entropy calculation
-
-2. **Strength Scoring**
-   - 0-100 point scale
-   - Five strength levels (Very Weak to Very Strong)
-   - Weighted scoring algorithm
-   - Positive and negative factors
-
-3. **Actionable Recommendations**
-   - Specific weakness identification
-   - Improvement suggestions
-   - Priority-based feedback
-
-4. **Detailed Reporting**
-   - Formatted text reports
-   - Visual indicators (✓/✗)
-   - Comprehensive metrics
-   - Export-ready format
-
----
-
-## Architecture
-
-```
-password-analyzer-module/
-├── src/
-│   └── password_lib/
-│       ├── __init__.py
-│       └── analyzer.py           # Main analyzer class
-├── tests/
-│   └── test_password_analyzer.py # Unit tests
-└── pyproject.toml                # Package configuration
-```
-
-### Class Structure
-
-```python
-class PasswordStrength(Enum):
-    VERY_WEAK = 0
-    WEAK = 1
-    MODERATE = 2
-    STRONG = 3
-    VERY_STRONG = 4
-
-class PasswordAnalyzer:
-    PATTERNS: dict          # Regex patterns for analysis
-    COMMON_PASSWORDS: set   # Known weak passwords
-    
-    def analyze(password: str) -> dict
-    def generate_report(password: str) -> str
-    def get_strength_description(strength: PasswordStrength) -> str
-```
-
----
-
-## Usage Examples
-
-### Basic Password Analysis
+### Password Analysis
 
 ```python
 from password_lib.analyzer import PasswordAnalyzer
@@ -113,286 +38,82 @@ from password_lib.analyzer import PasswordAnalyzer
 analyzer = PasswordAnalyzer()
 
 # Analyze a password
-result = analyzer.analyze("MyP@ssw0rd123")
+result = analyzer.analyze("MyP@ssw0rd2024")
 
-print(f"Strength: {result['strength']}")
-print(f"Score: {result['score']}/100")
-print(f"Secure: {result['is_secure']}")
-
-# Output:
-# Strength: MODERATE
-# Score: 55/100
-# Secure: False
-```
-
-### Detailed Analysis
-
-```python
-analyzer = PasswordAnalyzer()
-result = analyzer.analyze("xK9#mL2$pQ7&nR4")
-
-# Access detailed checks
-checks = result['checks']
-print(f"Has uppercase: {checks['has_uppercase']}")
-print(f"Has special chars: {checks['has_special_chars']}")
-print(f"Character variety: {checks['variety']}")
+print(f"Strength: {result['strength']}")  # STRONG
+print(f"Score: {result['score']}/100")    # 75/100
+print(f"Secure: {result['is_secure']}")   # True
 
 # Get suggestions
 for suggestion in result['suggestions']:
     print(f"- {suggestion}")
+```
 
-# Access metrics
-details = result['details']
-print(f"Length: {details['length']}")
-print(f"Unique characters: {details['unique_characters']}")
-print(f"Character variety: {details['character_variety']}")
+### Password Generation
+
+```python
+from password_lib.analyzer import PasswordAnalyzer
+
+analyzer = PasswordAnalyzer()
+
+# Generate a secure password
+result = analyzer.generate_password(
+    length=16,
+    use_lowercase=True,
+    use_uppercase=True,
+    use_digits=True,
+    use_special=True,
+    exclude_ambiguous=True
+)
+
+print(f"Password: {result['password']}")
+print(f"Strength: {result['analysis']['strength']}")
+print(f"Score: {result['analysis']['score']}/100")
 ```
 
 ### Generate Report
 
 ```python
 analyzer = PasswordAnalyzer()
-report = analyzer.generate_report("MyP@ssw0rd123")
-print(report)
 
-# Output:
-# ============================================================
-# PASSWORD STRENGTH ANALYSIS REPORT
-# ============================================================
-# 
-# Password Length: 13 characters
-# Strength Level: MODERATE (55/100)
-# Security Status: ✗ NOT SECURE
-# 
-# ------------------------------------------------------------
-# CHARACTER ANALYSIS:
-# ------------------------------------------------------------
-#   Lowercase letters: ✓
-#   Uppercase letters: ✓
-#   Numbers: ✓
-#   Special characters: ✓
-#   Character variety: GOOD
-# 
-# ------------------------------------------------------------
-# SECURITY CHECKS:
-# ------------------------------------------------------------
-#   Common password: ✓ No
-#   Consecutive characters: ✗ Found
-#   Sequential numbers: ✗ Found
-#   Sequential letters: ✓ None
-#   Common patterns: ✗ Found
-# 
-# ------------------------------------------------------------
-# SUGGESTIONS FOR IMPROVEMENT:
-# ------------------------------------------------------------
-#   1. Avoid repeating the same character multiple times
-#   2. Avoid sequential numbers (e.g., 123, 456)
-#   3. Avoid common words like 'password', 'admin', 'qwerty'
-# 
-# ============================================================
-```
-
-### Batch Analysis
-
-```python
-analyzer = PasswordAnalyzer()
-
-passwords = [
-    "password",
-    "P@ssw0rd",
-    "MySecureP@ss2024!",
-    "xK9#mL2$pQ7&nR4vT8"
-]
-
-for pwd in passwords:
-    result = analyzer.analyze(pwd)
-    print(f"{pwd:25} -> {result['strength']:12} ({result['score']}/100)")
-
-# Output:
-# password                  -> VERY_WEAK    (0/100)
-# P@ssw0rd                  -> WEAK         (25/100)
-# MySecureP@ss2024!         -> STRONG       (70/100)
-# xK9#mL2$pQ7&nR4vT8        -> VERY_STRONG  (95/100)
-```
-
----
-
-## API Reference
-
-### PasswordAnalyzer Class
-
-#### `__init__()`
-Initialize the PasswordAnalyzer instance.
-
-```python
-analyzer = PasswordAnalyzer()
-```
-
----
-
-#### `analyze(password: str) -> dict`
-Analyze password strength and return detailed results.
-
-**Parameters**:
-- `password` (str): The password string to analyze
-
-**Returns**:
-- `dict`: Analysis results containing:
-  - `strength` (str): Strength level name
-  - `strength_level` (int): Numeric strength level (0-4)
-  - `score` (int): Strength score (0-100)
-  - `length` (int): Password length
-  - `checks` (dict): Individual check results
-  - `suggestions` (list): Improvement suggestions
-  - `details` (dict): Detailed metrics
-  - `is_secure` (bool): Whether password is secure (score >= 60)
-
-**Raises**:
-- `TypeError`: If password is not a string
-
-**Example**:
-```python
-result = analyzer.analyze("MyPassword123!")
-print(result['strength'])  # "MODERATE"
-print(result['score'])     # 55
-```
-
----
-
-#### `generate_report(password: str) -> str`
-Generate a detailed text report of password analysis.
-
-**Parameters**:
-- `password` (str): The password to analyze
-
-**Returns**:
-- `str`: Formatted text report
-
-**Example**:
-```python
-report = analyzer.generate_report("MyPassword123!")
+# Generate detailed text report
+report = analyzer.generate_report("TestPassword123!")
 print(report)
 ```
-
----
-
-#### `get_strength_description(strength: PasswordStrength) -> str`
-Get human-readable description of password strength.
-
-**Parameters**:
-- `strength` (PasswordStrength): Strength enum value
-
-**Returns**:
-- `str`: Description of the strength level
-
-**Example**:
-```python
-from password_lib.analyzer import PasswordStrength
-
-desc = analyzer.get_strength_description(PasswordStrength.STRONG)
-print(desc)  # "Strong - Good password, resistant to most attacks"
-```
-
----
-
-### Result Dictionary Structure
-
-```python
-{
-    'strength': 'STRONG',              # Strength level name
-    'strength_level': 3,               # Numeric level (0-4)
-    'score': 75,                       # Score out of 100
-    'length': 16,                      # Password length
-    'is_secure': True,                 # Score >= 60
-    
-    'checks': {
-        # Character presence
-        'has_lowercase': True,
-        'has_uppercase': True,
-        'has_digits': True,
-        'has_special_chars': True,
-        'has_spaces': False,
-        
-        # Quality metrics
-        'length': 'good',              # very_weak, weak, adequate, good, excellent
-        'variety': 'excellent',        # weak, moderate, good, excellent
-        'uniqueness': 'good',          # weak, moderate, good, excellent
-        'entropy': 'high',             # low, high
-        
-        # Security checks
-        'has_consecutive_chars': False,
-        'has_sequential_numbers': False,
-        'has_sequential_letters': False,
-        'has_common_patterns': False,
-        'is_common_password': False
-    },
-    
-    'suggestions': [
-        'Consider using 16+ characters for maximum security'
-    ],
-    
-    'details': {
-        'length': 16,
-        'character_variety': 4,        # Number of character types (0-4)
-        'unique_characters': 15,       # Number of unique characters
-        'raw_score': 75
-    }
-}
-```
-
----
 
 ## Analysis Criteria
 
-### Scoring Algorithm
+### Length Scoring (30 points max)
+- 16+ characters: 30 points (excellent)
+- 12-15 characters: 25 points (good)
+- 8-11 characters: 15 points (adequate)
+- 6-7 characters: 5 points (weak)
+- <6 characters: 0 points (very weak)
 
-The analyzer uses a weighted scoring system:
+### Character Variety (25 points max)
+- 4 types (lowercase, uppercase, digits, special): 25 points
+- 3 types: 20 points
+- 2 types: 10 points
+- 1 type: 0 points
 
-| Criterion | Max Points | Description |
-|-----------|-----------|-------------|
-| Length | 30 | Longer passwords are stronger |
-| Character Variety | 25 | Mix of character types |
-| Uniqueness | 15 | Ratio of unique characters |
-| Entropy Bonus | 10 | Randomness and unpredictability |
-| Pattern Penalties | -45 | Deductions for weak patterns |
+### Uniqueness (15 points max)
+- Based on ratio of unique characters to total length
+- 80%+ unique: 15 points
+- 60-79% unique: 10 points
+- 40-59% unique: 5 points
+- <40% unique: 0 points
 
-**Total Range**: 0-100 points
+### Entropy Bonus (10 points)
+- Awarded for high randomness (variety + no patterns)
 
-### Length Scoring
-
-| Length | Points | Rating |
-|--------|--------|--------|
-| < 6 | 0 | Very Weak |
-| 6-7 | 5 | Weak |
-| 8-11 | 15 | Adequate |
-| 12-15 | 25 | Good |
-| 16+ | 30 | Excellent |
-
-### Character Variety Scoring
-
-| Types Present | Points | Rating |
-|--------------|--------|--------|
-| 1 type | 0 | Weak |
-| 2 types | 10 | Moderate |
-| 3 types | 20 | Good |
-| 4 types | 25 | Excellent |
-
-**Character Types**:
-1. Lowercase letters (a-z)
-2. Uppercase letters (A-Z)
-3. Digits (0-9)
-4. Special characters (!@#$%^&*...)
-
-### Pattern Detection
-
-**Negative Patterns** (deduct points):
+### Negative Scoring
 - Consecutive characters (aaa, 111): -10 points
 - Sequential numbers (123, 456): -10 points
 - Sequential letters (abc, xyz): -10 points
 - Common patterns (password, admin): -15 points
-- Common passwords (from list): -30 points
+- Common password: -30 points
 
-### Strength Levels
+## Strength Levels
 
 | Level | Score Range | Description |
 |-------|-------------|-------------|
@@ -402,285 +123,157 @@ The analyzer uses a weighted scoring system:
 | STRONG | 60-79 | Good password, resistant to most attacks |
 | VERY_STRONG | 80-100 | Excellent password, highly secure |
 
----
+## Password Generation Options
+
+### Length
+- Minimum: 8 characters
+- Maximum: 128 characters
+- Recommended: 16+ characters
+
+### Character Sets
+- **Lowercase**: a-z (26 characters)
+- **Uppercase**: A-Z (26 characters)
+- **Digits**: 0-9 (10 characters)
+- **Special**: !@#$%^&*()_+-=[]{}|;:,.<>? (25 characters)
+
+### Ambiguous Character Exclusion
+When enabled, excludes:
+- `0` (zero) - can be confused with `O` (letter O)
+- `1` (one) - can be confused with `l` (lowercase L) or `I` (uppercase i)
+- `O` (uppercase O) - can be confused with `0` (zero)
+- `I` (uppercase I) - can be confused with `1` (one) or `l` (lowercase L)
+- `l` (lowercase L) - can be confused with `1` (one) or `I` (uppercase i)
+
+## API Integration
+
+### Analyze Password
+```bash
+curl -X POST http://localhost:8000/api/password/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"password": "MyP@ssw0rd2024"}'
+```
+
+### Generate Password
+```bash
+curl -X POST http://localhost:8000/api/password/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "length": 16,
+    "use_lowercase": true,
+    "use_uppercase": true,
+    "use_digits": true,
+    "use_special": true,
+    "exclude_ambiguous": true
+  }'
+```
 
 ## Testing
 
-### Running Tests
+Run the test suite:
 
 ```bash
-cd tests
-python -m pytest test_password_analyzer.py -v
-
-# With coverage
-python -m pytest test_password_analyzer.py --cov=password_lib --cov-report=html
+cd src/backend/password-analyzer-module
+python -m pytest tests/
 ```
 
-### Test Cases
-
-#### Basic Functionality Tests
-```python
-def test_empty_password():
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze("")
-    assert result['strength'] == 'VERY_WEAK'
-    assert result['score'] == 0
-
-def test_strong_password():
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze("xK9#mL2$pQ7&nR4")
-    assert result['strength'] in ['STRONG', 'VERY_STRONG']
-    assert result['score'] >= 60
-```
-
-#### Pattern Detection Tests
-```python
-def test_consecutive_characters():
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze("Passsword123")
-    assert result['checks']['has_consecutive_chars'] == True
-
-def test_sequential_numbers():
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze("Pass123word")
-    assert result['checks']['has_sequential_numbers'] == True
-
-def test_common_password():
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze("password")
-    assert result['checks']['is_common_password'] == True
-```
-
-#### Edge Cases
-```python
-def test_unicode_characters():
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze("Pässwörd123!")
-    assert result['score'] > 0
-
-def test_very_long_password():
-    analyzer = PasswordAnalyzer()
-    long_pwd = "a" * 100
-    result = analyzer.analyze(long_pwd)
-    assert result['length'] == 100
-```
-
----
-
-## Best Practices
-
-### Password Recommendations
-
-#### ✅ Good Passwords
-```python
-# Long with variety
-"MySecureP@ssw0rd2024!"
-
-# Random characters
-"xK9#mL2$pQ7&nR4"
-
-# Passphrase style
-"correct-horse-battery-staple-2024"
-
-# Mixed case with symbols
-"Tr0ub4dor&3"
-```
-
-#### ❌ Bad Passwords
-```python
-# Too short
-"Pass1!"
-
-# Common password
-"password123"
-
-# Sequential patterns
-"abc123xyz"
-
-# Personal information
-"john1990"
-
-# Keyboard patterns
-"qwerty123"
-```
-
-### Usage Guidelines
-
-#### For Users
-1. **Minimum 12 characters**: Aim for 16+ for best security
-2. **Mix character types**: Use all four types
-3. **Avoid patterns**: No sequences or repetitions
-4. **Unique passwords**: Different for each account
-5. **Use password manager**: Store securely
-
-#### For Developers
-1. **Never store plaintext**: Always hash passwords
-2. **Use strong hashing**: bcrypt, Argon2, or PBKDF2
-3. **Add salt**: Unique salt per password
-4. **Enforce minimums**: Require strong passwords
-5. **Educate users**: Provide feedback and guidance
-
-### Integration Example
-
-```python
-from password_lib.analyzer import PasswordAnalyzer
-
-def validate_password(password: str) -> tuple[bool, list]:
-    """
-    Validate password strength for user registration.
-    
-    Returns:
-        (is_valid, error_messages)
-    """
-    analyzer = PasswordAnalyzer()
-    result = analyzer.analyze(password)
-    
-    # Require score >= 60 (STRONG or better)
-    if result['score'] < 60:
-        return False, result['suggestions']
-    
-    return True, []
-
-# Usage
-password = input("Enter password: ")
-valid, errors = validate_password(password)
-
-if not valid:
-    print("Password too weak. Please:")
-    for error in errors:
-        print(f"  - {error}")
-else:
-    print("Password accepted!")
-```
-
----
-
-## Performance
-
-### Benchmarks
-
-- **Analysis time**: < 1ms per password
-- **Memory usage**: < 1MB
-- **Batch processing**: 10,000+ passwords/second
-
-### Optimization Tips
-
-1. **Reuse analyzer instance**: Create once, use many times
-2. **Batch processing**: Analyze multiple passwords in sequence
-3. **Cache results**: Store analysis for frequently checked passwords
-
----
-
-## Common Patterns
-
-### Pattern Detection Examples
-
-#### Consecutive Characters
-```python
-"aaa", "111", "!!!"  # Detected
-"abc", "123"         # Not consecutive (sequential)
-```
-
-#### Sequential Numbers
-```python
-"012", "123", "234", "789"  # Detected
-"135", "246"                # Not detected (not sequential)
-```
-
-#### Sequential Letters
-```python
-"abc", "xyz", "def"  # Detected (case-insensitive)
-"ace", "bdf"         # Not detected (not sequential)
-```
-
-#### Common Patterns
-```python
-"password", "admin", "user", "login"  # Detected
-"qwerty", "asdf", "1234"              # Detected
-```
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-#### Issue: "TypeError: Password must be a string"
-**Solution**: Ensure password is a string, not bytes or other type
-```python
-# Wrong
-analyzer.analyze(b"password")
-
-# Correct
-analyzer.analyze("password")
-```
-
-#### Issue: Low score for seemingly strong password
-**Solution**: Check for patterns that reduce score
-```python
-result = analyzer.analyze("Password123")
-print(result['checks'])  # Look for negative checks
-print(result['suggestions'])  # See what to improve
-```
-
-#### Issue: Suggestions not helpful
-**Solution**: Suggestions are based on detected weaknesses. If password is already strong, there may be few or no suggestions.
-
----
-
-## Contributing
-
-### Development Setup
+Or run tests manually:
 
 ```bash
-# Install in development mode
-pip install -e .
-
-# Install development dependencies
-pip install pytest pytest-cov black flake8 mypy
+python tests/test_password_analyzer.py
 ```
 
-### Adding New Patterns
+## Security Considerations
 
-To add new pattern detection:
+### For Analysis
+- This module analyzes password strength but does NOT store passwords
+- Analysis is performed locally without network transmission
+- Results are returned immediately without logging
 
-1. Add regex pattern to `PATTERNS` dict
-2. Implement detection logic in `analyze()` method
-3. Add corresponding suggestion
-4. Write tests for new pattern
-5. Update documentation
+### For Generation
+- Uses `secrets` module for cryptographically secure randomness
+- NOT suitable for cryptographic keys (use dedicated key generation tools)
+- Generated passwords should be stored securely (use password managers)
+- Never transmit passwords over unencrypted connections
 
-Example:
+### Best Practices
+1. **Minimum Length**: Use at least 12 characters (16+ recommended)
+2. **Character Variety**: Include all four character types
+3. **Avoid Patterns**: No sequential or repeated characters
+4. **Unique Passwords**: Different password for each service
+5. **Regular Updates**: Change passwords periodically
+6. **Password Manager**: Use a password manager to store complex passwords
+
+## Common Weak Passwords
+
+The analyzer checks against a database of commonly used weak passwords:
+- password, 123456, 12345678, qwerty, abc123
+- monkey, letmein, trustno1, dragon, baseball
+- iloveyou, master, sunshine, ashley, bailey
+- shadow, superman, qazwsx, 123123, admin
+- welcome, login, passw0rd, password1
+
+## Examples
+
+### Example 1: Weak Password
 ```python
-# In analyzer.py
-PATTERNS = {
-    ...
-    'new_pattern': re.compile(r'your_regex_here'),
-}
-
-# In analyze() method
-has_new_pattern = bool(self.PATTERNS['new_pattern'].search(password))
-if has_new_pattern:
-    score -= 10
-    suggestions.append("Avoid new pattern")
+result = analyzer.analyze("password123")
+# Strength: WEAK
+# Score: 25/100
+# Suggestions:
+#   - Add uppercase letters (A-Z)
+#   - Add special characters (!@#$%^&*)
+#   - Avoid common words like 'password'
 ```
 
----
+### Example 2: Strong Password
+```python
+result = analyzer.analyze("Xk9#mP2@qL5$")
+# Strength: STRONG
+# Score: 75/100
+# Suggestions: (none - good password!)
+```
+
+### Example 3: Very Strong Password
+```python
+result = analyzer.analyze("C0mpl3x!P@ssw0rd#2024$Secure")
+# Strength: VERY_STRONG
+# Score: 95/100
+# Suggestions: (none - excellent password!)
+```
+
+### Example 4: Generate Password
+```python
+result = analyzer.generate_password(length=20)
+# Password: Xk9#mP2@qL5$wR3!tY7%
+# Strength: VERY_STRONG
+# Score: 98/100
+```
+
+## Version History
+
+### Version 1.1.0 (2026-05-06)
+- ✨ Added secure password generation with `secrets` module
+- ✨ Customizable character sets and length
+- ✨ Ambiguous character exclusion option
+- ✨ Automatic strength analysis of generated passwords
+- 📚 Enhanced documentation
+
+### Version 1.0.0 (2026-04-28)
+- Initial release
+- Password strength analysis
+- Scoring system (0-100)
+- Pattern detection
+- Common password checking
+- Detailed reporting
 
 ## License
 
-See the main project LICENSE file.
+See main project LICENSE file.
 
----
+## Contributing
 
-## Support
-
-- **Documentation**: See main project docs
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-
----
-
-**Version**: 1.0.0  
-**Last Updated**: 2026-04-28  
-**Maintained By**: Gilfi Development Team
+Contributions are welcome! Please ensure:
+1. All tests pass
+2. Code follows existing style
+3. Documentation is updated
+4. Security best practices are followed
