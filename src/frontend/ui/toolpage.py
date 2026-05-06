@@ -3,6 +3,8 @@ Gilfi - ToolPage
 Reusable widget for each tool module.
 """
 
+from html import escape
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox,
@@ -169,7 +171,10 @@ class ToolPage(QWidget):
         return ""
 
     def append_output(self, text):
-        self.output_text.append(text)
+        # QTextEdit.append() interprets HTML when the text looks like markup.
+        # Escape by default so attacker- or backend-controlled strings can't
+        # inject tags (e.g. <img src=...> for tracking).
+        self.output_text.append(escape(str(text)))
 
     def clear_output(self):
         self.output_text.clear()

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-from modules import network_scanner, port_scanner, rsa_encryption, hash_module, hash_crack_module, arcade
+from modules import network_scanner, port_scanner, rsa_encryption, hash_module, hash_crack_module, password_analyzer, arcade
 from ui.chatwidget import ChatWidget
 
 
@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
             ("RSA Encryption",   rsa_encryption.create_page()),
             ("Hash Module",      hash_module.create_page()),
             ("Hash Crack Module", hash_crack_module.create_page()),
+            ("Password Analyzer", password_analyzer.create_page()),
             ("Arcade",           arcade.create_page()),
         ]
 

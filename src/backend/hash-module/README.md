@@ -211,6 +211,48 @@ result = cracker.crack(
 )
 ```
 
+**Optimized Rule Tiers** (25+ rules, prioritized by effectiveness):
+
+**Tier 1 - Highest Success Rate** (Try first):
+- `:` Nothing (original word)
+- `c` Capitalize (Password)
+- `$1$2$3` Append 123 (password123)
+- `$1` Append 1 (password1)
+- `c$1$2$3` Combined (Password123) ⭐ Most common
+- `c$1` Combined (Password1)
+
+**Tier 2 - Common Variations**:
+- `u` Uppercase (PASSWORD)
+- `l` Lowercase (password)
+- `$1$2` Append 12
+- `$!` Append !
+- `c$!` Capitalize + ! (Password!)
+- `$1$!` Append 1! (password1!)
+
+**Tier 3 - Years** (Very common in real passwords):
+- `$2$0$2$3` Append 2023
+- `$2$0$2$4` Append 2024 ⭐ Current year
+- `$2$0$2$5` Append 2025
+- `c$2$0$2$4` Combined (Password2024)
+
+**Tier 4 - Selective Leet Speak** (Highest impact):
+- `sa@se3si1so0` Basic leet (p@ssw0rd)
+- `sa@` Just a→@ (p@ssword)
+- `so0` Just o→0 (passw0rd)
+
+**Tier 5 - Additional Patterns**:
+- `^1` Prepend 1 (1password)
+- `$@` Append @ (password@)
+- `c$1$2` Capitalize + 12 (Password12)
+- `$1$2$3$4` Append 1234
+
+**Performance Optimization**:
+- Rules applied inline during wordlist iteration
+- No intermediate storage - memory efficient
+- Early termination on match
+- Optimized for rockyou.txt (14M+ words)
+- Prevents API timeouts with smart processing
+
 ### Advanced Usage - Progress Tracking
 
 ```python
@@ -337,6 +379,21 @@ result = cracker.crack(
     use_multiprocessing=True
 )
 ```
+
+#### `_wordlist_shuffler(wordlist_path: str) -> Generator[str, None, None]`
+Internal generator that yields transformed password candidates.
+
+**Parameters**:
+- `wordlist_path` (str): Path to wordlist file
+
+**Yields**:
+- `str`: Transformed password candidates based on regex templates
+
+**Features**:
+- Applies 25+ transformation patterns per word
+- Handles empty lines gracefully
+- Memory efficient (generator-based)
+- Supports large wordlists (100M+ entries)
 
 #### `crack_with_progress(hash_value: str, wordlist: str, algorithm: str) -> Generator`
 Crack hash with progress updates.
@@ -579,6 +636,13 @@ python -m pytest --cov=hash_lib --cov-report=html
 - Test unsuccessful cracking
 - Test invalid wordlist path
 - Test large wordlist handling
+- **Test wordlist shuffler basic transformations**
+- **Test wordlist shuffler leet speak**
+- **Test cracking with shuffler (capitalized passwords)**
+- **Test cracking with shuffler (passwords with numbers)**
+- **Test cracking without shuffler**
+- **Test shuffler with empty lines**
+- **Test shuffler file not found error**
 - Performance benchmarks
 
 ### Example Test
