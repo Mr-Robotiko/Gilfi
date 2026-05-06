@@ -143,6 +143,53 @@ class GilfiAPIClient:
         })
         return result.get('result')
     
+    # Password Analyzer Methods
+    
+    def password_analyze(self, password: str) -> Dict[str, Any]:
+        """
+        Analyze password strength
+        
+        Args:
+            password: Password to analyze
+            
+        Returns:
+            Dictionary with password analysis results including:
+            - strength: Strength level name (VERY_WEAK, WEAK, MODERATE, STRONG, VERY_STRONG)
+            - score: Numeric score (0-100)
+            - is_secure: Boolean indicating if password is secure (score >= 60)
+            - checks: Dictionary of individual checks
+            - suggestions: List of improvement suggestions
+        """
+        return self._request('POST', '/api/password/analyze', json={
+            'password': password
+        })
+    
+    def password_generate(self, length: int = 16, use_lowercase: bool = True,
+                         use_uppercase: bool = True, use_digits: bool = True,
+                         use_special: bool = True, exclude_ambiguous: bool = True) -> Dict[str, Any]:
+        """
+        Generate a secure random password
+        
+        Args:
+            length: Password length (default: 16, min: 8, max: 128)
+            use_lowercase: Include lowercase letters
+            use_uppercase: Include uppercase letters
+            use_digits: Include digits
+            use_special: Include special characters
+            exclude_ambiguous: Exclude ambiguous characters (0/O, 1/l/I)
+            
+        Returns:
+            Dictionary with generated password and its analysis
+        """
+        return self._request('POST', '/api/password/generate', json={
+            'length': length,
+            'use_lowercase': use_lowercase,
+            'use_uppercase': use_uppercase,
+            'use_digits': use_digits,
+            'use_special': use_special,
+            'exclude_ambiguous': exclude_ambiguous
+        })
+    
     # RSA Module Methods
     
     def rsa_encrypt(self, text: str, operation: str = 'encrypt') -> Dict[str, Any]:
@@ -221,6 +268,19 @@ def hash_crack(hash_value: str, hash_type: str, wordlist: str = 'common') -> Opt
 def rsa_encrypt(text: str, operation: str = 'encrypt') -> Dict[str, Any]:
     """Perform RSA encryption"""
     return get_client().rsa_encrypt(text, operation)
+
+
+def password_analyze(password: str) -> Dict[str, Any]:
+    """Analyze password strength (returns full analysis)"""
+    return get_client().password_analyze(password)
+
+
+def password_generate(length: int = 16, use_lowercase: bool = True,
+                     use_uppercase: bool = True, use_digits: bool = True,
+                     use_special: bool = True, exclude_ambiguous: bool = True) -> Dict[str, Any]:
+    """Generate secure random password (returns password and analysis)"""
+    return get_client().password_generate(length, use_lowercase, use_uppercase,
+                                         use_digits, use_special, exclude_ambiguous)
 
 
 def askgilfi_query(prompt: str) -> str:
