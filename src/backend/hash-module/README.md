@@ -103,19 +103,27 @@ hash-module/
 
 ### 3. Cracker (hash_cracker.cracker)
 
-**Purpose**: Crack password hashes using wordlist attacks.
+**Purpose**: Crack password hashes using wordlist attacks with optimized Hashcat/John the Ripper-inspired rules.
 
 **Features**:
-- Dictionary-based attacks
+- Dictionary-based attacks with optimized rule engine
 - Multi-algorithm support
-- Progress tracking
-- High performance (1M+ hashes/second)
-- Large wordlist support (100M+ entries)
+- **25+ High-Impact Transformation Rules** (ENABLED BY DEFAULT)
+- Tiered rule system prioritizing most effective patterns
+- Automatic password variations (capitalization, numbers, special chars)
+- Selective leet speak transformations
+- High performance - optimized for large wordlists
+- Large wordlist support (100M+ entries like rockyou.txt)
+- SQLite caching for cracked hashes
+- Smart batching to prevent timeouts
 
-**Attack Methods**:
-- Straight wordlist attack
-- Case variations (future)
-- Rule-based mutations (future)
+**Optimized Rule-Based Attack** (Inspired by Hashcat/John the Ripper):
+- **Tier 1 Rules**: Most common patterns (original, capitalize, append 123/1)
+- **Tier 2 Rules**: Common variations (uppercase, lowercase, special chars)
+- **Tier 3 Rules**: Years (2023-2025) - very common in real passwords
+- **Tier 4 Rules**: Selective leet speak (highest impact substitutions)
+- **Tier 5 Rules**: Additional patterns (prepend, combined rules)
+- **25+ optimized rules applied to EVERY word in rockyou.txt**
 
 ---
 
@@ -170,7 +178,7 @@ from hash_lib.hash_cracker.cracker import Cracker
 
 cracker = Cracker()
 
-# Crack MD5 hash
+# Crack MD5 hash with wordlist shuffler (default)
 hash_to_crack = "5f4dcc3b5aa765d61d8327deb882cf99"
 wordlist_path = "/path/to/wordlist.txt"
 algorithm = "md5"
@@ -181,7 +189,102 @@ if result:
     print(f"Password found: {result}")
 else:
     print("Password not found in wordlist")
+
+# Crack without shuffler (exact matches only)
+result = cracker.crack(hash_to_crack, wordlist_path, algorithm, use_shuffler=False)
 ```
+
+### Wordlist Shuffler with Hashcat/John the Ripper Rules
+
+The wordlist shuffler uses **70+ rule-based transformations** inspired by Hashcat and John the Ripper, automatically applied to each word in the wordlist. This dramatically increases cracking success rates against real-world passwords.
+
+```python
+from hash_lib.hash_cracker.cracker import Cracker
+
+cracker = Cracker()
+
+# Example: If wordlist contains "password", the rule engine will try:
+#
+# BASIC RULES (Hashcat notation):
+# - password           (:  - nothing)
+# - PASSWORD           (u  - uppercase)
+# - Password           (c  - capitalize)
+# - pASSWORD           (C  - invert)
+# - PaSsWoRd           (t  - toggle case)
+#
+# APPEND RULES (Hashcat $X):
+# - password1          ($1)
+# - password123        ($1$2$3)
+# - password!          ($!)
+# - password2024       ($2$0$2$4)
+#
+# PREPEND RULES (Hashcat ^X):
+# - 1password          (^1)
+# - 123password        (^3^2^1)
+#
+# LEET SPEAK (Hashcat sXY):
+# - p@ssw0rd           (sa@se3si1so0ss$)
+# - p4ssw0rd           (sa4se3si!so0)
+#
+# MANIPULATION RULES:
+# - drowssap           (r  - reverse)
+# - asswordp           ({  - rotate left)
+# - passwordpassword   (d  - duplicate)
+#
+# COMBINED RULES:
+# - Password1          (c$1)
+# - Password123        (c$1$2$3)
+# - Password2024       (c$2$0$2$4)
+# - P@ssw0rd1          (csa@se3$1)
+# - And 50+ more variations per word!
+
+# Crack with rule engine enabled (default)
+hash_value = "482c811da5d5b4bc6d497ffa98491e38"  # MD5 of "Password123"
+result = cracker.crack(hash_value, "wordlist.txt", "md5")
+# Will find "Password123" even if wordlist only contains "password"
+```
+
+**Optimized Rule Tiers** (25+ rules, prioritized by effectiveness):
+
+**Tier 1 - Highest Success Rate** (Try first):
+- `:` Nothing (original word)
+- `c` Capitalize (Password)
+- `$1$2$3` Append 123 (password123)
+- `$1` Append 1 (password1)
+- `c$1$2$3` Combined (Password123) ⭐ Most common
+- `c$1` Combined (Password1)
+
+**Tier 2 - Common Variations**:
+- `u` Uppercase (PASSWORD)
+- `l` Lowercase (password)
+- `$1$2` Append 12
+- `$!` Append !
+- `c$!` Capitalize + ! (Password!)
+- `$1$!` Append 1! (password1!)
+
+**Tier 3 - Years** (Very common in real passwords):
+- `$2$0$2$3` Append 2023
+- `$2$0$2$4` Append 2024 ⭐ Current year
+- `$2$0$2$5` Append 2025
+- `c$2$0$2$4` Combined (Password2024)
+
+**Tier 4 - Selective Leet Speak** (Highest impact):
+- `sa@se3si1so0` Basic leet (p@ssw0rd)
+- `sa@` Just a→@ (p@ssword)
+- `so0` Just o→0 (passw0rd)
+
+**Tier 5 - Additional Patterns**:
+- `^1` Prepend 1 (1password)
+- `$@` Append @ (password@)
+- `c$1$2` Capitalize + 12 (Password12)
+- `$1$2$3$4` Append 1234
+
+**Performance Optimization**:
+- Rules applied inline during wordlist iteration
+- No intermediate storage - memory efficient
+- Early termination on match
+- Optimized for rockyou.txt (14M+ words)
+- Prevents API timeouts with smart processing
 
 ### Advanced Usage - Progress Tracking
 
@@ -266,13 +369,14 @@ types = identifier.identify("5f4dcc3b5aa765d61d8327deb882cf99")
 #### `__init__()`
 Initialize the Cracker instance.
 
-#### `crack(hash_value: str, wordlist: str, algorithm: str = 'sha256') -> Optional[str]`
-Attempt to crack a hash using a wordlist.
+#### `crack(hash_value: str, wordlist: str, algorithm: str = 'sha256', use_shuffler: bool = True) -> Optional[str]`
+Attempt to crack a hash using a wordlist with optional shuffler.
 
 **Parameters**:
 - `hash_value` (str): Hash to crack
 - `wordlist` (str): Path to wordlist file
 - `algorithm` (str): Hash algorithm (default: 'sha256')
+- `use_shuffler` (bool): Enable wordlist shuffler with regex templates (default: True)
 
 **Returns**:
 - `str`: Plaintext password if found
@@ -285,8 +389,28 @@ Attempt to crack a hash using a wordlist.
 **Example**:
 ```python
 cracker = Cracker()
+
+# With shuffler (recommended)
 result = cracker.crack("5f4dcc3b5aa765d61d8327deb882cf99", "wordlist.txt", "md5")
+
+# Without shuffler (exact matches only)
+result = cracker.crack("5f4dcc3b5aa765d61d8327deb882cf99", "wordlist.txt", "md5", use_shuffler=False)
 ```
+
+#### `_wordlist_shuffler(wordlist_path: str) -> Generator[str, None, None]`
+Internal generator that yields transformed password candidates.
+
+**Parameters**:
+- `wordlist_path` (str): Path to wordlist file
+
+**Yields**:
+- `str`: Transformed password candidates based on regex templates
+
+**Features**:
+- Applies 25+ transformation patterns per word
+- Handles empty lines gracefully
+- Memory efficient (generator-based)
+- Supports large wordlists (100M+ entries)
 
 #### `crack_with_progress(hash_value: str, wordlist: str, algorithm: str) -> Generator`
 Crack hash with progress updates.
@@ -340,6 +464,13 @@ python -m pytest --cov=hash_lib --cov-report=html
 - Test unsuccessful cracking
 - Test invalid wordlist path
 - Test large wordlist handling
+- **Test wordlist shuffler basic transformations**
+- **Test wordlist shuffler leet speak**
+- **Test cracking with shuffler (capitalized passwords)**
+- **Test cracking with shuffler (passwords with numbers)**
+- **Test cracking without shuffler**
+- **Test shuffler with empty lines**
+- **Test shuffler file not found error**
 - Performance benchmarks
 
 ### Example Test
@@ -444,6 +575,27 @@ pip install pytest pytest-cov black flake8
 4. Submit a pull request
 
 
-**Version**: 1.0.0
-**Last Updated**: 2026-04-28
+**Version**: 1.1.0
+**Last Updated**: 2026-05-06
 **Maintained By**: Gilfi Development Team
+
+---
+
+## Changelog
+
+### Version 1.1.0 (2026-05-06)
+- ✨ **NEW**: Wordlist shuffler with regex templates
+- ✨ Added 25+ password transformation patterns
+- ✨ Leet speak substitutions
+- ✨ Case variations (capitalize, uppercase, lowercase)
+- ✨ Number and special character combinations
+- ✨ SQLite caching for cracked hashes
+- 🧪 Added 6 new comprehensive tests for shuffler
+- 📚 Updated documentation with shuffler examples
+- 🚀 Significantly improved cracking success rate
+
+### Version 1.0.0 (2026-04-28)
+- Initial release
+- Hash generation (MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512)
+- Hash identification
+- Basic wordlist cracking
