@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
     def register_tools(self):
         """add new tools here"""
         tools = [
-            ("Network Scanner",  network_scanner.create_page()),
+            #("Network Scanner",  network_scanner.create_page()), In development
             ("Port Scanner",     port_scanner.create_page()),
             ("RSA Encryption",   rsa_encryption.create_page()),
             ("Hash Module",      hash_module.create_page()),
