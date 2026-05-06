@@ -10,13 +10,13 @@ from typing import Optional, Dict, Any, List
 class GilfiAPIClient:
     """Client for communicating with Gilfi backend API"""
     
-    def __init__(self, base_url: str = "http://localhost:8000", timeout: int = 30):
+    def __init__(self, base_url: str = "http://localhost:8000", timeout: int = 300):
         """
         Initialize API client
         
         Args:
             base_url: Base URL of the backend API (default: http://localhost:8000)
-            timeout: Request timeout in seconds (default: 30)
+            timeout: Request timeout in seconds (default: 300 = 5 minutes)
         """
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
@@ -124,7 +124,7 @@ class GilfiAPIClient:
         })
         return result.get('possible_types', [])
     
-    def hash_crack(self, hash_value: str, hash_type: str, wordlist: str = 'common') -> Optional[str]:
+    def hash_crack(self, hash_value: str, hash_type: str, wordlist: str = 'common', timeout: Optional[int] = None) -> Optional[str]:
         """
         Crack hash using wordlist
         
@@ -132,15 +132,22 @@ class GilfiAPIClient:
             hash_value: Hash to crack
             hash_type: Hash algorithm type (md5, sha256, etc.)
             wordlist: Wordlist name (default: common)
+            timeout: Custom timeout for this request (default: None = use client timeout)
             
         Returns:
             Cracked plaintext if found, None otherwise
         """
-        result = self._request('POST', '/api/hash/crack', json={
-            'hash': hash_value,
-            'hash_type': hash_type,
-            'wordlist': wordlist
-        })
+        # Use custom timeout if provided, otherwise use default
+        request_timeout = timeout if timeout is not None else self.timeout
+        
+        result = self._request('POST', '/api/hash/crack',
+            json={
+                'hash': hash_value,
+                'hash_type': hash_type,
+                'wordlist': wordlist
+            },
+            timeout=request_timeout
+        )
         return result.get('result')
     
     # RSA Module Methods
