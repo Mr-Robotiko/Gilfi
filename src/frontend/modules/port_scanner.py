@@ -2,7 +2,6 @@
 Gilfi Module - Port Scanner
 Checks if specific ports are open on a target host.
 TODO: connect to backend
-TODO for merz: meine eier lecken
 """
 
 from ui.toolpage import ToolPage
