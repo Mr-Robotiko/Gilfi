@@ -1,21 +1,22 @@
 # Gilfi Backend API Specification
 
 ## Document Information
-- **Version**: 1.0.0
+- **Version**: 1.1.0
 - **Base URL**: `http://localhost:8000`
 - **Protocol**: HTTP/REST
 - **Data Format**: JSON
-- **Date**: 2026-04-28
+- **Date**: 2026-05-06
 
 ## Table of Contents
 1. [Overview](#1-overview)
 2. [Common Responses](#2-common-responses)
 3. [Health & Status Endpoints](#3-health--status-endpoints)
 4. [Hash Module Endpoints](#4-hash-module-endpoints)
-5. [RSA Module Endpoints](#5-rsa-module-endpoints)
-6. [Ask-Gilfi Chatbot Endpoints](#6-ask-gilfi-chatbot-endpoints)
-7. [Error Handling](#7-error-handling)
-8. [Examples](#8-examples)
+5. [Password Analyzer Endpoints](#5-password-analyzer-endpoints)
+6. [RSA Module Endpoints](#6-rsa-module-endpoints)
+7. [Ask-Gilfi Chatbot Endpoints](#7-ask-gilfi-chatbot-endpoints)
+8. [Error Handling](#8-error-handling)
+9. [Examples](#9-examples)
 
 ---
 
@@ -131,7 +132,10 @@ curl http://localhost:8000/health
     },
     "password": {
       "name": "Password Analyzer",
-      "endpoints": ["/api/password/analyze"],
+      "endpoints": [
+        "/api/password/analyze",
+        "/api/password/generate"
+      ],
       "status": "available"
     },
     "askgilfi": {
@@ -279,18 +283,41 @@ curl -X POST http://localhost:8000/api/hash/identify \
 
 **Endpoint**: `POST /api/hash/crack`
 
-**Description**: Attempt to crack a password hash using a wordlist attack.
+**Description**: Attempt to crack a password hash using a wordlist attack with optional rule-based transformations.
 
 **Request Body**:
 ```json
 {
   "hash": "string (required)",
   "wordlist": "string (optional, default: /app/data/wordlist/rockyou.txt)",
-  "algorithm": "string (optional, default: sha256)"
+  "algorithm": "string (optional, default: sha256)",
+  "use_rules": "boolean (optional, default: false)",
+  "use_multiprocessing": "boolean (optional, default: false)",
+  "batch_size": "number (optional, default: 10000)"
 }
 ```
 
-**Response (Success)**:
+**Parameters**:
+- `hash`: The hash to crack (required)
+- `wordlist`: Path to wordlist file (optional, defaults to rockyou.txt)
+- `algorithm`: Hash algorithm to use (optional, defaults to sha256)
+- `use_rules`: Enable 60+ transformation rules for password variations (optional, default: false)
+- `use_multiprocessing`: Use parallel processing across CPU cores (optional, default: false)
+- `batch_size`: Number of words to process per batch (optional, default: 10000)
+
+**Rule-Based Transformations**:
+When `use_rules: true`, the cracker applies 60+ transformation patterns including:
+- Case variations (capitalize, uppercase, lowercase, alternate case)
+- Leet speak (o→0, e→3, a→4, i→1, s→5, t→7)
+- Number appending (1, 123, 2024, 99, etc.)
+- Special character appending (!, @, #, $, !!, $$, etc.)
+- Word manipulations (reverse, double, wrap with special chars)
+- Combinations (capitalize + numbers, leet + special chars)
+
+Examples of transformations:
+- `monkey` → `Monkey`, `MONKEY`, `m0nk3y`, `Monkey1!`, `monkey123`, `!monkey!`, `xXmonkeyXx`
+
+**Response (Success - Basic)**:
 ```json
 {
   "success": true,
@@ -299,7 +326,24 @@ curl -X POST http://localhost:8000/api/hash/identify \
   "cracked": true,
   "plaintext": "password",
   "attempts": 1234,
-  "time_elapsed": "0.5s"
+  "time_elapsed": "0.5s",
+  "used_rules": false
+}
+```
+
+**Response (Success - With Rules)**:
+```json
+{
+  "success": true,
+  "hash": "e10adc3949ba59abbe56e057f20f883e",
+  "algorithm": "md5",
+  "cracked": true,
+  "plaintext": "Monkey1!",
+  "original_word": "monkey",
+  "transformation": "cap_append_1!",
+  "attempts": 45678,
+  "time_elapsed": "2.3s",
+  "used_rules": true
 }
 ```
 
@@ -336,26 +380,263 @@ curl -X POST http://localhost:8000/api/hash/identify \
 - `500 Internal Server Error`: Cracking process failed
 
 **Performance Notes**:
-- Average speed: 1M+ hashes/second
+- Average speed: 1M+ hashes/second (basic mode)
+- With rules: 60+ transformations per word
+- Dual-layer caching (in-memory + SQLite) for faster repeated lookups
+- LRU cache for transformation results
+- Multiprocessing support for parallel cracking
 - Large wordlists may take several minutes
+- API timeout: 5 minutes (300 seconds)
 - Operation can be cancelled by client
 
-**Example**:
+**Examples**:
+
+Basic cracking:
 ```bash
 curl -X POST http://localhost:8000/api/hash/crack \
   -H "Content-Type: application/json" \
   -d '{
     "hash": "5f4dcc3b5aa765d61d8327deb882cf99",
+    "algorithm": "md5"
+  }'
+```
+
+With rule-based transformations:
+```bash
+curl -X POST http://localhost:8000/api/hash/crack \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hash": "e10adc3949ba59abbe56e057f20f883e",
     "algorithm": "md5",
-    "wordlist": "/app/data/wordlist/rockyou.txt"
+    "use_rules": true
+  }'
+```
+
+With multiprocessing:
+```bash
+curl -X POST http://localhost:8000/api/hash/crack \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hash": "5f4dcc3b5aa765d61d8327deb882cf99",
+    "algorithm": "sha256",
+    "use_rules": true,
+    "use_multiprocessing": true,
+    "batch_size": 50000
   }'
 ```
 
 ---
 
-## 5. RSA Module Endpoints
+## 5. Password Analyzer Endpoints
 
-### 5.1 RSA Encryption
+### 5.1 Analyze Password
+
+**Endpoint**: `POST /api/password/analyze`
+
+**Description**: Analyze password strength and security characteristics.
+
+**Request Body**:
+```json
+{
+  "password": "string (required)"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "password": "MyP@ssw0rd2024",
+  "analysis": {
+    "strength": "STRONG",
+    "score": 75,
+    "is_secure": true,
+    "length": 14,
+    "has_lowercase": true,
+    "has_uppercase": true,
+    "has_digits": true,
+    "has_special": true,
+    "unique_chars": 13,
+    "entropy": 3.7,
+    "has_consecutive_chars": false,
+    "has_sequential_numbers": false,
+    "has_sequential_letters": false,
+    "has_common_patterns": false,
+    "is_common_password": false,
+    "suggestions": []
+  }
+}
+```
+
+**Strength Levels**:
+| Level | Score Range | Description |
+|-------|-------------|-------------|
+| VERY_WEAK | 0-19 | Easily crackable, not recommended |
+| WEAK | 20-39 | Vulnerable to attacks, should be improved |
+| MODERATE | 40-59 | Acceptable but could be stronger |
+| STRONG | 60-79 | Good password, resistant to most attacks |
+| VERY_STRONG | 80-100 | Excellent password, highly secure |
+
+**Analysis Fields**:
+- `strength`: Overall strength level (VERY_WEAK to VERY_STRONG)
+- `score`: Numeric score from 0-100
+- `is_secure`: Boolean indicating if password meets security standards (score ≥ 60)
+- `length`: Number of characters
+- `has_lowercase`: Contains lowercase letters (a-z)
+- `has_uppercase`: Contains uppercase letters (A-Z)
+- `has_digits`: Contains digits (0-9)
+- `has_special`: Contains special characters (!@#$%^&*()_+-=[]{}|;:,.<>?)
+- `unique_chars`: Number of unique characters
+- `entropy`: Randomness measure (higher is better)
+- `has_consecutive_chars`: Contains repeated characters (aaa, 111)
+- `has_sequential_numbers`: Contains sequential numbers (123, 456)
+- `has_sequential_letters`: Contains sequential letters (abc, xyz)
+- `has_common_patterns`: Contains common patterns (password, admin)
+- `is_common_password`: Matches known weak passwords
+- `suggestions`: Array of improvement recommendations
+
+**Error Responses**:
+```json
+{
+  "error": "Password is required"
+}
+```
+
+**Status Codes**:
+- `200 OK`: Analysis completed successfully
+- `400 Bad Request`: Missing password parameter
+- `500 Internal Server Error`: Analysis failed
+
+**Example**:
+```bash
+curl -X POST http://localhost:8000/api/password/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"password": "MyP@ssw0rd2024"}'
+```
+
+---
+
+### 5.2 Generate Password
+
+**Endpoint**: `POST /api/password/generate`
+
+**Description**: Generate a cryptographically secure random password with customizable options.
+
+**Request Body**:
+```json
+{
+  "length": "number (optional, default: 16, range: 8-128)",
+  "use_lowercase": "boolean (optional, default: true)",
+  "use_uppercase": "boolean (optional, default: true)",
+  "use_digits": "boolean (optional, default: true)",
+  "use_special": "boolean (optional, default: true)",
+  "exclude_ambiguous": "boolean (optional, default: true)"
+}
+```
+
+**Parameters**:
+- `length`: Password length (8-128 characters, default: 16)
+- `use_lowercase`: Include lowercase letters a-z (default: true)
+- `use_uppercase`: Include uppercase letters A-Z (default: true)
+- `use_digits`: Include digits 0-9 (default: true)
+- `use_special`: Include special characters !@#$%^&*()_+-=[]{}|;:,.<>? (default: true)
+- `exclude_ambiguous`: Exclude ambiguous characters (0/O, 1/l/I) for clarity (default: true)
+
+**Response**:
+```json
+{
+  "success": true,
+  "password": "Xk9#mP2@qL5$wR3!",
+  "length": 16,
+  "analysis": {
+    "strength": "VERY_STRONG",
+    "score": 98,
+    "is_secure": true,
+    "length": 16,
+    "has_lowercase": true,
+    "has_uppercase": true,
+    "has_digits": true,
+    "has_special": true,
+    "unique_chars": 16,
+    "entropy": 4.0,
+    "suggestions": []
+  }
+}
+```
+
+**Security Features**:
+- Uses Python's `secrets` module for cryptographic randomness
+- Ensures at least one character from each selected character set
+- Shuffles characters using cryptographically secure random
+- NOT suitable for cryptographic keys (use dedicated key generation tools)
+
+**Ambiguous Characters**:
+When `exclude_ambiguous: true`, the following characters are excluded:
+- `0` (zero) - can be confused with `O` (letter O)
+- `1` (one) - can be confused with `l` (lowercase L) or `I` (uppercase i)
+- `O` (uppercase O) - can be confused with `0` (zero)
+- `I` (uppercase I) - can be confused with `1` (one) or `l` (lowercase L)
+- `l` (lowercase L) - can be confused with `1` (one) or `I` (uppercase i)
+
+**Error Responses**:
+```json
+{
+  "error": "Length must be between 8 and 128"
+}
+```
+
+```json
+{
+  "error": "At least one character type must be selected"
+}
+```
+
+**Status Codes**:
+- `200 OK`: Password generated successfully
+- `400 Bad Request`: Invalid parameters
+- `500 Internal Server Error`: Generation failed
+
+**Examples**:
+
+Generate default password (16 characters, all types):
+```bash
+curl -X POST http://localhost:8000/api/password/generate \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Generate custom password (20 characters, no special chars):
+```bash
+curl -X POST http://localhost:8000/api/password/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "length": 20,
+    "use_lowercase": true,
+    "use_uppercase": true,
+    "use_digits": true,
+    "use_special": false,
+    "exclude_ambiguous": true
+  }'
+```
+
+Generate PIN-like password (8 digits only):
+```bash
+curl -X POST http://localhost:8000/api/password/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "length": 8,
+    "use_lowercase": false,
+    "use_uppercase": false,
+    "use_digits": true,
+    "use_special": false
+  }'
+```
+
+---
+
+## 6. RSA Module Endpoints
+
+### 6.1 RSA Encryption
 
 **Endpoint**: `POST /api/rsa/encrypt`
 
@@ -436,9 +717,9 @@ curl -X POST http://localhost:8000/api/rsa/encrypt \
 
 ---
 
-## 6. Ask-Gilfi Chatbot Endpoints
+## 7. Ask-Gilfi Chatbot Endpoints
 
-### 6.1 Query Chatbot
+### 7.1 Query Chatbot
 
 **Endpoint**: `POST /api/askgilfi/query`
 
@@ -503,9 +784,9 @@ curl -X POST http://localhost:8000/api/askgilfi/query \
 
 ---
 
-## 7. Error Handling
+## 8. Error Handling
 
-### 7.1 Error Response Format
+### 8.1 Error Response Format
 
 All errors follow a consistent format:
 
@@ -520,7 +801,7 @@ All errors follow a consistent format:
 }
 ```
 
-### 7.2 Common Error Codes
+### 8.2 Common Error Codes
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -530,7 +811,7 @@ All errors follow a consistent format:
 | `PROCESSING_ERROR` | 500 | Error during request processing |
 | `TIMEOUT` | 504 | Operation timed out |
 
-### 7.3 Error Examples
+### 8.3 Error Examples
 
 **Missing Required Field**:
 ```json
@@ -567,9 +848,9 @@ All errors follow a consistent format:
 }
 ```
 
-## 8. Examples
+## 9. Examples
 
-### 8.1 Complete Hash Workflow
+### 9.1 Complete Hash Workflow
 
 ```bash
 # 1. Generate a hash
@@ -596,7 +877,100 @@ curl -X POST http://localhost:8000/api/hash/crack \
 
 # Response: {"cracked": true, "plaintext": "password"}
 ```
+
+### 9.2 Complete Password Security Workflow
+
+```bash
+# 1. Generate a secure password
+curl -X POST http://localhost:8000/api/password/generate \
+  -H "Content-Type: application/json" \
+  -d '{"length": 16}'
+
+# Response: {"password": "Xk9#mP2@qL5$wR3!", "analysis": {...}}
+
+# 2. Analyze an existing password
+curl -X POST http://localhost:8000/api/password/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"password": "password123"}'
+
+# Response: {"strength": "WEAK", "score": 25, "suggestions": [...]}
+
+# 3. Generate a strong password with specific requirements
+curl -X POST http://localhost:8000/api/password/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "length": 20,
+    "use_lowercase": true,
+    "use_uppercase": true,
+    "use_digits": true,
+    "use_special": true,
+    "exclude_ambiguous": true
+  }'
+
+# Response: {"password": "Yk8@nQ4#pM7$xW2!", "analysis": {...}}
+```
+
+### 9.3 Advanced Hash Cracking with Rules
+
+```bash
+# 1. Crack a simple password
+curl -X POST http://localhost:8000/api/hash/crack \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hash": "5f4dcc3b5aa765d61d8327deb882cf99",
+    "algorithm": "md5"
+  }'
+
+# Response: {"cracked": true, "plaintext": "password"}
+
+# 2. Crack a password with transformations (e.g., "Monkey1!")
+curl -X POST http://localhost:8000/api/hash/crack \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hash": "e10adc3949ba59abbe56e057f20f883e",
+    "algorithm": "md5",
+    "use_rules": true
+  }'
+
+# Response: {
+#   "cracked": true,
+#   "plaintext": "Monkey1!",
+#   "original_word": "monkey",
+#   "transformation": "cap_append_1!"
+# }
+
+# 3. Crack with multiprocessing for large wordlists
+curl -X POST http://localhost:8000/api/hash/crack \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+    "algorithm": "sha256",
+    "use_rules": true,
+    "use_multiprocessing": true,
+    "batch_size": 50000
+  }'
+
+# Response: {"cracked": true, "plaintext": "password"}
+```
+
 ---
+
+## Version History
+
+### Version 1.1.0 (2026-05-06)
+- ✨ Added password analyzer endpoints (`/api/password/analyze`)
+- ✨ Added password generator endpoints (`/api/password/generate`)
+- ✨ Enhanced hash cracking with 60+ rule-based transformations
+- ✨ Added multiprocessing support for hash cracking
+- ✨ Dual-layer caching (in-memory + SQLite) for improved performance
+- ✨ Increased API timeout to 5 minutes for large wordlist operations
+- 📚 Comprehensive documentation of all new features
+
+### Version 1.0.0 (2026-04-28)
+- Initial API release
+- Hash generation, identification, and cracking
+- RSA encryption
+- Ask-Gilfi chatbot integration
 
 ---
 

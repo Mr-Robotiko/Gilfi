@@ -2,6 +2,8 @@
 
 Gilfi is a comprehensive security and network analysis toolkit with an AI-powered chatbot assistant. It provides various security tools including port scanning, hash cracking, RSA encryption, and network analysis capabilities, all wrapped in a user-friendly PyQt6 interface.
 
+![logo](data/assets/logo.jpeg)
+
 ## Table of Contents
 
 - [Gilfi - Security \& Network Analysis Toolkit](#gilfi---security--network-analysis-toolkit)
@@ -42,7 +44,8 @@ Gilfi is a comprehensive security and network analysis toolkit with an AI-powere
 - **Port Scanner**: Scan network ports to identify open services
 - **Network Scanner**: Discover devices on your network
 - **Hash Module**: Generate and identify various hash types (MD5, SHA-1, SHA-256, etc.)
-- **Hash Cracker**: Crack password hashes using wordlist attacks
+- **Hash Cracker**: Advanced password hash cracking with 60+ Hashcat/John the Ripper-inspired transformation rules
+- **Password Analyzer & Generator**: Comprehensive password strength analysis and cryptographically secure password generation
 - **RSA Encryption**: Encrypt and decrypt messages using RSA cryptography
 - **Ask Gilfi**: AI-powered chatbot assistant for security-related questions (powered by Ollama)
 
@@ -98,7 +101,17 @@ Gilfi follows a client-server architecture with clear separation between fronten
 - **Hash Module**:
   - Hash generation (MD5, SHA-1, SHA-256, SHA-512, etc.)
   - Hash type identification
-  - Dictionary-based hash cracking
+  - Advanced dictionary-based hash cracking with 60+ transformation rules
+  - Hashcat/John the Ripper-inspired wordlist shuffler
+  - Performance optimizations (caching, batching, early termination)
+
+- **Password Analyzer Module**:
+  - Comprehensive password strength analysis (VERY_WEAK to VERY_STRONG)
+  - Scoring system (0-100) based on multiple security criteria
+  - Character analysis and pattern detection
+  - Cryptographically secure password generation
+  - Customizable password generation options
+  - Real-time strength feedback
 
 - **Network Module**:
   - Network device discovery
@@ -235,13 +248,27 @@ The following ports must be available:
 
 The backend runs on `http://localhost:8000` and provides the following endpoints:
 
-- `/health` - Health check
-- `/hash/generate` - Generate hashes
-- `/hash/identify` - Identify hash types
-- `/hash/crack` - Crack password hashes
-- `/network/scan` - Scan network for devices
-- `/network/port-scan` - Scan ports on a target
-- `/chat` - AI chatbot interactions
+**General**:
+- `GET /health` - Health check
+- `GET /api/modules` - List available modules
+
+**Hash Module**:
+- `POST /api/hash/generate` - Generate hashes
+- `POST /api/hash/identify` - Identify hash types
+- `POST /api/hash/crack` - Crack password hashes (with advanced rule-based transformations)
+
+**Password Module**:
+- `POST /api/password/analyze` - Analyze password strength
+- `POST /api/password/generate` - Generate secure random passwords
+
+**Network Module**:
+- `POST /api/networking/port_scanner` - Scan ports on a target
+
+**RSA Module**:
+- `POST /api/rsa/encrypt` - RSA encryption/decryption
+
+**AI Assistant**:
+- `POST /api/askgilfi/query` - AI chatbot interactions
 
 API documentation is available at `http://localhost:8000/docs` when the backend is running.
 
