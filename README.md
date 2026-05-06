@@ -2,6 +2,8 @@
 
 Gilfi is a comprehensive security and network analysis toolkit with an AI-powered chatbot assistant. It provides various security tools including port scanning, hash cracking, RSA encryption, and network analysis capabilities, all wrapped in a user-friendly PyQt6 interface.
 
+[logo](data/assets/logo.jpeg)
+
 ## Table of Contents
 
 - [Gilfi - Security \& Network Analysis Toolkit](#gilfi---security--network-analysis-toolkit)
