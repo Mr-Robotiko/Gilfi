@@ -16,6 +16,10 @@ from hash_lib.hash_cracker.cracker import Cracker
 from networking_lib.shared_info import Info
 from networking_lib.port_scanner import Scanner
 
+# Add password analyzer to path
+sys.path.insert(0, '/app/backend/password-analyzer-module/src')
+from password_lib.analyzer import PasswordAnalyzer
+
 # Paths
 RSA_BINARY = "/app/backend/rsa-module/rsa-module"
 ASKGILFI_SCRIPT = "/app/backend/ask-gilfi-module/ask-gilfi-chat.py"
@@ -40,6 +44,7 @@ info = Info()
 hasher = Hasher()
 identifier = HashIdentifier()
 cracker = Cracker()
+password_analyzer = PasswordAnalyzer()
 
 # Global Ollama process for reuse
 _ollama_process = None
@@ -215,6 +220,87 @@ def hash_crack():
         return jsonify({'error': f'Unsupported hash algorithm: {algorithm}'}), 400
     except FileNotFoundError as e:
         return jsonify({'error': f'Wordlist not found: {wordlist}'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/password/analyze', methods=['POST'])
+def password_analyze():
+    """
+    Analyze password strength
+    POST /api/password/analyze
+    Body: {"password": "string"}
+    """
+    try:
+        data = request.get_json()
+        password = data.get('password')
+        
+        if password is None:
+            return jsonify({'error': 'Password is required'}), 400
+        
+        # Analyze the password
+        result = password_analyzer.analyze(password)
+        
+        return jsonify({
+            'success': True,
+            'password_length': result['length'],
+            'strength': result['strength'],
+            'strength_level': result['strength_level'],
+            'score': result['score'],
+            'is_secure': result['is_secure'],
+            'checks': result['checks'],
+            'suggestions': result['suggestions'],
+            'details': result['details']
+        })
+    
+    except TypeError as e:
+        return jsonify({'error': 'Invalid password format'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/password/generate', methods=['POST'])
+def password_generate():
+    """
+    Generate a secure random password
+    POST /api/password/generate
+    Body: {
+        "length": 16,
+        "use_lowercase": true,
+        "use_uppercase": true,
+        "use_digits": true,
+        "use_special": true,
+        "exclude_ambiguous": true
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        
+        length = data.get('length', 16)
+        use_lowercase = data.get('use_lowercase', True)
+        use_uppercase = data.get('use_uppercase', True)
+        use_digits = data.get('use_digits', True)
+        use_special = data.get('use_special', True)
+        exclude_ambiguous = data.get('exclude_ambiguous', True)
+        
+        # Generate password
+        result = password_analyzer.generate_password(
+            length=length,
+            use_lowercase=use_lowercase,
+            use_uppercase=use_uppercase,
+            use_digits=use_digits,
+            use_special=use_special,
+            exclude_ambiguous=exclude_ambiguous
+        )
+        
+        return jsonify({
+            'success': True,
+            'password': result['password'],
+            'length': result['length'],
+            'character_sets': result['character_sets'],
+            'analysis': result['analysis']
+        })
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -395,6 +481,8 @@ if __name__ == '__main__':
     print("  POST /api/hash/generate")
     print("  POST /api/hash/identify")
     print("  POST /api/hash/crack")
+    print("  POST /api/password/analyze")
+    print("  POST /api/password/generate")
     print("  POST /api/rsa/encrypt")
     print("  POST /api/askgilfi/query")
     print("=" * 50)
