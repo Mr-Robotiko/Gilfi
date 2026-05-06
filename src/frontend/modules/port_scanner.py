@@ -1,11 +1,15 @@
 """
 Gilfi Module - Port Scanner
 Checks if specific ports are open on a target host.
+TODO: connect to backend
+TODO for merz: meine eier lecken
 """
 
 from ui.toolpage import ToolPage
-import api_client
+from PyQt6.QtWidgets import (QWidget, QLineEdit)
+from PyQt6.QtCore import Qt
 
+import api_client
 
 def _parse_port(s: str):
     """Return port as int if valid (1..65535), else None."""
@@ -32,6 +36,10 @@ def create_page():
 
 def run(page: ToolPage):
     target = page.get_input("Target IP")
+    port = page.get_input("Port")
+    port2 = page.get_input("Port2")
+    scan_range = [0]
+
     if not target:
         page.set_status("Please enter a target IP", error=True)
         return
@@ -60,6 +68,15 @@ def run(page: ToolPage):
             scan_range = [start]
 
     page.clear_output()
+    
+    if port:
+        scan_range[0] = int(port)
+    if port2:
+        if int(port2) < scan_range[0]:
+            page.set_status("Ending port cant be smaller than starting port", error=True)
+            return
+        scan_range.append(int(port2))
+
     call_port_scanner(page, target, scan_range)
 
 def call_port_scanner(page, target, scan_range):

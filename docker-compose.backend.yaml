@@ -8,7 +8,7 @@ services:
       - OLLAMA_MODELS=/app/backend/ask-gilfi-module/models
       - FLASK_APP=api_server.py
     volumes:
-      # Mount data directory for wordlists and assets
+      # Mount data directory for wordlists, assets, and cache (persistent storage)
       - ./data:/app/data:z
       # Mount backend source for development
       - ./src/backend:/app/backend:z

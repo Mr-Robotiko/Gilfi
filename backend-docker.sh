@@ -5,6 +5,11 @@
 
 set -e
 
+# Detect script directory and change to it
+# This allows the script to be run from anywhere
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 COMPOSE_FILE="docker-compose.backend.yaml"
 CONTAINER_NAME="gilfi_backend"
 
@@ -101,6 +106,11 @@ case "${1:-}" in
         $DOCKER_CMD exec -it $CONTAINER_NAME bash
         ;;
     
+    port_scanner)
+        echo "Backend container status:"
+        $DOCKER_CMD ps -a --afilter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        ;;
+
     status)
         echo "Backend container status:"
         $DOCKER_CMD ps -a --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

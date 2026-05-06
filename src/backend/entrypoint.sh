@@ -127,6 +127,16 @@ else
     print_success "ask-gilfi model already configured"
 fi
 
+# Create cache directory for persistent hash storage
+print_info "Setting up cache directory..."
+CACHE_DIR="/app/data/cache"
+mkdir -p "$CACHE_DIR"
+if [ -d "$CACHE_DIR" ]; then
+    print_success "Cache directory ready at $CACHE_DIR"
+else
+    print_error "Failed to create cache directory"
+fi
+
 # Extract rockyou.7z if not already extracted
 print_info "Checking rockyou wordlist..."
 
@@ -136,16 +146,51 @@ ROCKYOU_TXT="/app/data/wordlist/rockyou.txt"
 if [ -f "$ROCKYOU_ARCHIVE" ]; then
     if [ ! -f "$ROCKYOU_TXT" ]; then
         print_info "Extracting rockyou.7z wordlist..."
-        if 7z x "$ROCKYOU_ARCHIVE" -o/app/data/wordlist/ -y > /dev/null 2>&1; then
-            print_success "rockyou.txt extracted successfully"
+        
+        # Try different 7z commands (compatibility for different distros)
+        # Note: -o flag must be directly followed by path (no space)
+        if command -v 7z &> /dev/null; then
+            print_info "Using 7z command..."
+            if 7z x "$ROCKYOU_ARCHIVE" -o"/app/data/wordlist/" -y; then
+                print_success "rockyou.txt extracted successfully"
+                # Verify extraction
+                if [ -f "$ROCKYOU_TXT" ]; then
+                    print_success "Verified: rockyou.txt exists at $ROCKYOU_TXT"
+                    ls -lh "$ROCKYOU_TXT"
+                else
+                    print_error "Extraction completed but file not found at expected location"
+                    print_info "Listing wordlist directory contents:"
+                    ls -la /app/data/wordlist/
+                fi
+            else
+                print_error "Failed to extract rockyou.7z with 7z (exit code: $?)"
+            fi
+        elif command -v 7za &> /dev/null; then
+            print_info "Using 7za command..."
+            if 7za x "$ROCKYOU_ARCHIVE" -o"/app/data/wordlist/" -y; then
+                print_success "rockyou.txt extracted successfully"
+                # Verify extraction
+                if [ -f "$ROCKYOU_TXT" ]; then
+                    print_success "Verified: rockyou.txt exists at $ROCKYOU_TXT"
+                    ls -lh "$ROCKYOU_TXT"
+                else
+                    print_error "Extraction completed but file not found at expected location"
+                    print_info "Listing wordlist directory contents:"
+                    ls -la /app/data/wordlist/
+                fi
+            else
+                print_error "Failed to extract rockyou.7z with 7za (exit code: $?)"
+            fi
         else
-            print_error "Failed to extract rockyou.7z"
+            print_error "No 7z extraction tool found (tried: 7z, 7za)"
+            print_error "Please install p7zip or p7zip-full package"
         fi
     else
-        print_success "rockyou.txt already extracted"
+        print_success "rockyou.txt already extracted at $ROCKYOU_TXT"
     fi
 else
     print_error "rockyou.7z not found at $ROCKYOU_ARCHIVE"
+    print_info "Please ensure rockyou.7z is in the data/wordlist directory"
 fi
 
 # Verify Python packages
@@ -155,6 +200,12 @@ if python -c "import hash_lib" 2>/dev/null; then
     print_success "Hash module package installed"
 else
     print_error "Hash module package not found"
+fi
+
+if python -c "import networking-lib" 2>/dev/null; then
+    print_success "Networking module package installed"
+else
+    print_error "Networking module package not found"
 fi
 
 if python -c "import requests" 2>/dev/null; then
@@ -173,6 +224,7 @@ echo "  - Architecture: $(uname -m)"
 # Display available modules
 print_info "Available backend modules:"
 echo "  - Hash module: /app/backend/hash-module"
+echo "  - Networking module: /app/backend/networking-module"
 echo "  - RSA module: /app/backend/rsa-module/rsa-module"
 echo "  - Ask-Gilfi: /app/backend/ask-gilfi-module/ask-gilfi-chat.py"
 

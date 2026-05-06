@@ -4,11 +4,13 @@
 FROM python:3.11-slim
 
 # Install system dependencies for compilation, runtime, and 7zip extraction
+# Note: p7zip-full provides both 7z and 7za commands for maximum compatibility
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     make \
     p7zip-full \
+    p7zip \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -19,6 +21,7 @@ RUN chmod +x /app/backend/entrypoint.sh
 COPY . /app/backend/
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install -e /app/backend/hash-module
+RUN pip install -e /app/backend/networking-module
 
 # Compile RSA module
 RUN gcc /app/backend/rsa-module/rsa-module.c -o /app/backend/rsa-module/rsa-module

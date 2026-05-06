@@ -5,6 +5,14 @@
 
 set -e  # Exit on error
 
+# Detect script directory and change to it
+# This allows the script to be run from anywhere
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "Working directory: $SCRIPT_DIR"
+echo ""
+
 echo "=========================================="
 echo "   Gilfi - Installation & Run Script"
 echo "=========================================="
@@ -133,10 +141,35 @@ if [ -n "$CONTAINER_CMD" ]; then
     # Check if backend-docker.sh exists
     if [ -f "backend-docker.sh" ]; then
         chmod +x backend-docker.sh
+        
+        # Check if backend image exists
+        echo "Checking backend image..."
+        IMAGE_EXISTS=$($CONTAINER_CMD images | grep -c "gilfi.*backend" || true)
+        
+        if [ "$IMAGE_EXISTS" -eq 0 ]; then
+            echo "Backend image not found, building for first time..."
+            ./backend-docker.sh build
+        else
+            # Check if entrypoint.sh or Dockerfile changed (simple check)
+            if [ "src/backend/entrypoint.sh" -nt "$HOME/.gilfi_last_build" ] || \
+               [ "src/backend/Dockerfile" -nt "$HOME/.gilfi_last_build" ] 2>/dev/null; then
+                echo "Backend code changed, rebuilding..."
+                ./backend-docker.sh rebuild
+                touch "$HOME/.gilfi_last_build"
+            fi
+        fi
+        
         ./backend-docker.sh start
+        touch "$HOME/.gilfi_last_build"
     else
         # Fallback to docker-compose
         if [ -f "docker-compose.backend.yaml" ]; then
+            # Build if image doesn't exist
+            IMAGE_EXISTS=$($CONTAINER_CMD images | grep -c "gilfi.*backend" || true)
+            if [ "$IMAGE_EXISTS" -eq 0 ]; then
+                echo "Building backend image..."
+                $CONTAINER_CMD compose -f docker-compose.backend.yaml build
+            fi
             $CONTAINER_CMD compose -f docker-compose.backend.yaml up -d
             echo -e "${GREEN}✓${NC} Backend container started"
         else
