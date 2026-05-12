@@ -22,7 +22,7 @@ class RSAWorker(QThread):
     def run(self):
         try:
             # Call backend API with plaintext as a number
-            result = api_client.rsa_encrypt(self.plaintext, 'encrypt')
+            result = api_client.rsa_encrypt(int(self.plaintext))
             
             if result.get('success'):
                 # Format output similar to C binary
@@ -49,7 +49,7 @@ class RSAWorker(QThread):
                 if 'ciphertext' in result:
                     output_lines.append(f"Ciphertext (C) = {result['ciphertext']}")
                 if 'decrypted' in result:
-                    output_lines.append(f"Decrypted message (M') = {result['decrypted']}")
+                    output_lines.append(f"Decrypted message (M*) = {result['decrypted']}")
                 
                 self.output_ready.emit('\n'.join(output_lines))
                 self.finished_ok.emit()
