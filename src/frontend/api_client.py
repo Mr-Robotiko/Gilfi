@@ -199,20 +199,18 @@ class GilfiAPIClient:
     
     # RSA Module Methods
     
-    def rsa_encrypt(self, text: str, operation: str = 'encrypt') -> Dict[str, Any]:
+    def rsa_encrypt(self, plaintext: int) -> Dict[str, Any]:
         """
         Perform RSA encryption/decryption
         
         Args:
-            text: Text to encrypt/decrypt
-            operation: Operation type (encrypt/decrypt)
+            plaintext: Number to encrypt/decrypt
             
         Returns:
             Dictionary with RSA operation results
         """
         return self._request('POST', '/api/rsa/encrypt', json={
-            'text': text,
-            'operation': operation
+            'plaintext': plaintext
         })
     
     # Ask-Gilfi Methods
@@ -272,9 +270,9 @@ def hash_crack(hash_value: str, hash_type: str, wordlist: str = 'common') -> Opt
     return get_client().hash_crack(hash_value, hash_type, wordlist)
 
 
-def rsa_encrypt(text: str, operation: str = 'encrypt') -> Dict[str, Any]:
+def rsa_encrypt(plaintext: int) -> Dict[str, Any]:
     """Perform RSA encryption"""
-    return get_client().rsa_encrypt(text, operation)
+    return get_client().rsa_encrypt(plaintext)
 
 
 def password_analyze(password: str) -> Dict[str, Any]:

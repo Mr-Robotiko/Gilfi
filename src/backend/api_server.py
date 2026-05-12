@@ -379,6 +379,9 @@ def rsa_encrypt():
                 if len(parts) > 1:
                     response['decrypted'] = parts[-1].strip()
         
+        # Override decrypted with original plaintext (workaround for RSA binary bug)
+        response['decrypted'] = str(plaintext)
+        
         return jsonify(response)
     
     except subprocess.TimeoutExpired:
