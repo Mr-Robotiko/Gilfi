@@ -2,11 +2,9 @@
 Gilfi Module - Network Scanner
 Scans a subnet for active devices.
 
-NOTE: This module currently returns hardcoded sample data. Real ARP/ICMP
-scanning is not yet implemented. The output is therefore not a real scan
-result.
-
-TODO: connect C module
+STATUS: Not yet wired to the backend. The output is hardcoded sample data
+purely so the page renders during development. The module is intentionally
+left out of the main navigation in mainwindow.register_tools().
 """
 
 from ui.toolpage import ToolPage
@@ -35,17 +33,17 @@ def run(page):
     page.clear_output()
     page.set_status("Returning mock data ...")
 
-    page.append_output("WARNING: MOCK MODULE")
-    page.append_output("The following list is hardcoded and is NOT the result of")
-    page.append_output("an actual network scan.")
-    page.append_output("─" * 60)
+    page.append_warning("WARNING: MOCK MODULE")
+    page.append_dim("The following list is hardcoded and is NOT the result of")
+    page.append_dim("an actual network scan.")
+    page.append_dim("─" * 60)
     page.append_output(f"Subnet: {subnet}")
-    page.append_output("─" * 60)
-    page.append_output("192.168.1.1     Gateway       (up)")
-    page.append_output("192.168.1.12    Desktop-PC    (up)")
-    page.append_output("192.168.1.34    Smartphone    (up)")
-    page.append_output("192.168.1.100   NAS           (up)")
-    page.append_output("─" * 60)
+    page.append_dim("─" * 60)
+    page.append_success("192.168.1.1     Gateway       (up)")
+    page.append_success("192.168.1.12    Desktop-PC    (up)")
+    page.append_success("192.168.1.34    Smartphone    (up)")
+    page.append_success("192.168.1.100   NAS           (up)")
+    page.append_dim("─" * 60)
     page.append_output("4 hosts (mock)")
 
     page.set_status("Done (mock data – no real scan was performed)", error=True)

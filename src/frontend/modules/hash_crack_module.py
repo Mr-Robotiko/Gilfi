@@ -1,6 +1,6 @@
 """
 Gilfi Module - Hash Cracker
-Uses backend API via api_client instead of direct imports.
+Dictionary-based hash cracking, performed by the backend API.
 """
 
 from ui.toolpage import ToolPage
@@ -10,7 +10,21 @@ import api_client
 def create_page():
     page = ToolPage(
         title="Hash Crack Module",
-        description="Cracks MD5, SHA-1, SHA-256 and more based on rockyou.txt"
+        description="Cracks MD5, SHA-1, SHA-256 and more based on rockyou.txt",
+        help_text=(
+            "Tries to reverse a hash by hashing every word in a wordlist "
+            "(rockyou.txt, ~14M leaked passwords) and comparing.\n\n"
+            "Fields:\n"
+            "  • Hash — the hex string to crack.\n"
+            "  • Algorithm — which algorithm produced the hash "
+            "(md5, sha1, sha256, …).\n\n"
+            "If the original plaintext is in the wordlist, it pops out. "
+            "If not, you get 'not found' — but that doesn't mean the hash "
+            "is safe, just that this particular attack didn't work.\n\n"
+            "Cracking can take a while. Hit Cancel if you don't want to "
+            "wait — the backend job will finish in the background but the "
+            "GUI is free again."
+        )
     )
     page.add_field("Hash", "Hash to crack")
     page.add_field("Algorithm", "e.g. md5, sha1, sha256 (default: sha256)")
@@ -26,39 +40,31 @@ def run(page):
     if not hash_value:
         page.set_status("Please enter hash value", error=True)
         return
+
     page.clear_output()
 
-    _run_crack(page, hash_value, algo)
-
-
-def _run_crack(page, hash_value, algo):
-    page.set_status("Cracking ... (this may take a while)")
-    
-    try:
-        # Use API client with correct parameter order: hash_value, hash_type, wordlist
-        result = api_client.hash_crack(hash_value, algo, 'common')
-        
+    def _on_success(result):
+        page.append_dim(f"Hash:      {hash_value}")
+        page.append_dim(f"Algorithm: {algo.upper()}")
+        page.append_dim("─" * 40)
         if result is None:
-            page.append_output(f"Hash:      {hash_value}")
-            page.append_output(f"Algorithm: {algo.upper()}")
-            page.append_output("─" * 40)
-            page.append_output("No plaintext found in wordlist")
+            page.append_warning("No plaintext found in wordlist")
             page.set_status("Not found")
         else:
-            page.append_output(f"Hash:      {hash_value}")
-            page.append_output(f"Algorithm: {algo.upper()}")
-            page.append_output("─" * 40)
-            page.append_output(f"Plaintext: {result}")
-            page.set_status(f"Done - Cracked!")
-            
-    except ConnectionError as e:
-        page.set_status("Backend not available", error=True)
-        page.append_output(str(e))
-        page.append_output("\nMake sure the backend container is running:")
-        page.append_output("  ./backend-docker.sh start")
-    except ValueError:
-        page.append_output(f"[ERROR] Unsupported algorithm: '{algo}'")
-        page.set_status("Unknown algorithm", error=True)
-    except Exception as e:
-        page.append_output(f"[ERROR] {e}")
-        page.set_status("Error", error=True)
+            page.append_success(f"Plaintext: {result}")
+            page.set_status("Done - Cracked!")
+
+    def _on_error(err_msg):
+        if "algorithm" in err_msg.lower() or "unsupported" in err_msg.lower():
+            page.append_error(f"[ERROR] Unsupported algorithm: '{algo}'")
+            page.set_status("Unknown algorithm", error=True)
+        else:
+            page.append_error(f"[ERROR] {err_msg}")
+
+    page.run_async(
+        work_fn=lambda: api_client.hash_crack(hash_value, algo, 'common'),
+        on_success=_on_success,
+        on_error=_on_error,
+        running_text="Cracking ... (this may take a while)",
+        done_text="Done",
+    )

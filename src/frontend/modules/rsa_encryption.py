@@ -1,74 +1,34 @@
 """
 Gilfi Module - RSA Encryption
-Uses backend API via api_client instead of calling C binary directly.
-Uses QThread to keep the GUI responsive.
+Uses backend API via api_client. Async work is handled by ToolPage.run_async,
+which keeps the GUI responsive and disables the Run button while the call
+is in flight.
 """
 
-from PyQt6.QtCore import QThread, pyqtSignal
 from ui.toolpage import ToolPage
 import api_client
-
-
-class RSAWorker(QThread):
-    """Calls the backend API in a background thread"""
-    output_ready = pyqtSignal(str)
-    error_occurred = pyqtSignal(str)
-    finished_ok = pyqtSignal()
-
-    def __init__(self, plaintext):
-        super().__init__()
-        self.plaintext = plaintext
-
-    def run(self):
-        try:
-            # Call backend API with plaintext as a number
-            result = api_client.rsa_encrypt(self.plaintext, 'encrypt')
-            
-            if result.get('success'):
-                # Format output similar to C binary
-                output_lines = []
-                output_lines.append("--- RSA Key Generation ---")
-                
-                # Extract p, q, n from output if available
-                if 'output' in result:
-                    for line in result['output'].split('\n'):
-                        if any(x in line for x in ['p =', 'q =', 'n =', 'phi =']):
-                            output_lines.append(line)
-                
-                output_lines.append("-" * 26)
-                output_lines.append("")
-                
-                if 'public_key' in result:
-                    output_lines.append(f"Public Key (e, n) = {result['public_key']}")
-                if 'private_key' in result:
-                    output_lines.append(f"Private Key (d, n) = {result['private_key']}")
-                
-                output_lines.append("")
-                output_lines.append(f"Original message (M) = {self.plaintext}")
-                
-                if 'ciphertext' in result:
-                    output_lines.append(f"Ciphertext (C) = {result['ciphertext']}")
-                if 'decrypted' in result:
-                    output_lines.append(f"Decrypted message (M') = {result['decrypted']}")
-                
-                self.output_ready.emit('\n'.join(output_lines))
-                self.finished_ok.emit()
-            else:
-                self.error_occurred.emit(result.get('error', 'Unknown error'))
-                
-        except ConnectionError as e:
-            self.error_occurred.emit(f"Backend not available: {str(e)}")
-        except Exception as e:
-            self.error_occurred.emit(str(e))
-
-
-_worker = None
 
 
 def create_page():
     page = ToolPage(
         title="RSA Encryption",
-        description="Generates an RSA key pair and performs encryption/decryption."
+        description="Generates an RSA key pair and performs encryption/decryption.",
+        help_text=(
+            "Demo of RSA, the asymmetric algorithm behind much of the "
+            "modern web (TLS, signed software, SSH keys).\n\n"
+            "Steps the module runs on the backend:\n"
+            "  1. Pick two primes p, q and compute n = p*q.\n"
+            "  2. Derive public exponent e and private exponent d so that "
+            "(m^e)^d ≡ m (mod n).\n"
+            "  3. Encrypt the plaintext as c = m^e mod n.\n"
+            "  4. Decrypt c back to m to prove it works.\n\n"
+            "Field:\n"
+            "  • Plaintext (number) — your message, as an integer. RSA "
+            "operates on numbers; in real-world TLS the message is the "
+            "session key, which is then used for fast symmetric encryption.\n\n"
+            "Note: the primes used here are tiny and unsafe — this is a "
+            "teaching toy, not a real cryptosystem."
+        )
     )
     page.add_field("Plaintext (number)", "e.g. 42, 12345")
     page.set_button_text("Encrypt")
@@ -77,8 +37,6 @@ def create_page():
 
 
 def run(page):
-    global _worker
-
     plaintext = page.get_input("Plaintext (number)")
 
     if not plaintext:
@@ -86,34 +44,47 @@ def run(page):
         return
 
     try:
-        int(plaintext)
+        plaintext_int = int(plaintext)
     except ValueError:
         page.set_status("Integers only", error=True)
         return
 
-    if _worker and _worker.isRunning():
-        page.set_status("Already running ...", error=True)
+    page.clear_output()
+
+    page.run_async(
+        work_fn=lambda: api_client.rsa_encrypt(plaintext_int),
+        on_success=lambda result: _show_result(page, plaintext, result),
+        running_text="Encrypting via backend API ...",
+        done_text="Done",
+    )
+
+
+def _show_result(page, plaintext, result):
+    if not result.get('success'):
+        page.append_error(f"[ERROR] {result.get('error', 'Unknown error')}")
+        page.set_status("Error", error=True)
         return
 
-    page.clear_output()
-    page.set_status("Encrypting via backend API ...")
+    page.append_accent("--- RSA Key Generation ---")
 
-    page.btn_run.setEnabled(False)
+    # Extract p, q, n, phi from the raw output block if the backend sends one.
+    if 'output' in result:
+        for line in result['output'].split('\n'):
+            if any(x in line for x in ['p =', 'q =', 'n =', 'phi =']):
+                page.append_dim(line)
 
-    _worker = RSAWorker(plaintext)
+    page.append_dim("-" * 26)
+    page.append_output("")
 
-    _worker.output_ready.connect(
-        lambda out: [page.append_output(line) for line in out.splitlines()]
-    )
-    _worker.error_occurred.connect(
-        lambda err: (
-            page.append_output(f"[ERROR] {err}"),
-            page.append_output("\nMake sure the backend container is running:"),
-            page.append_output("  ./backend-docker.sh start"),
-            page.set_status("Error", error=True)
-        )
-    )
-    _worker.finished.connect(lambda: page.btn_run.setEnabled(True))
-    _worker.finished_ok.connect(lambda: page.set_status("Done"))
+    if 'public_key' in result:
+        page.append_success(f"Public Key (e, n) = {result['public_key']}")
+    if 'private_key' in result:
+        page.append_warning(f"Private Key (d, n) = {result['private_key']}")
 
-    _worker.start()
+    page.append_output("")
+    page.append_dim(f"Original message (M) = {plaintext}")
+
+    if 'ciphertext' in result:
+        page.append_accent(f"Ciphertext (C) = {result['ciphertext']}")
+    if 'decrypted' in result:
+        page.append_success(f"Decrypted message (M*) = {result['decrypted']}")

@@ -27,7 +27,9 @@ _LOGO_PATH = os.path.normpath(
     os.path.join(_HERE, "..", "..", "..", "data", "assets", "logo.jpeg")
 )
 
-# Theme colors (kept in sync with ui/style.py)
+# Logo colors. Hardcoded on purpose: the animated logo plays during the
+# splash before the user can change the theme, and its colours are part of
+# the brand identity rather than the theme palette.
 COLOR_ACCENT = QColor(83, 168, 216)    # #53a8d8  cyan
 COLOR_GREEN = QColor(74, 222, 128)     # #4ade80
 COLOR_RING = QColor(15, 52, 96)        # #0f3460
@@ -153,7 +155,10 @@ def paint_animated_logo(painter, cx, cy, radius, angle_deg, pulse_phase, pixmap)
         painter.setBrush(QBrush(COLOR_RING))
         painter.drawEllipse(QPointF(cx, cy), radius, radius)
         font_size = max(10, int(radius * 0.34))
-        font = QFont("Segoe UI", font_size, QFont.Weight.Bold)
+        font = QFont()
+        font.setStyleHint(QFont.StyleHint.SansSerif)
+        font.setPointSize(font_size)
+        font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
         painter.setPen(COLOR_ACCENT)
         text_rect = QRectF(cx - radius, cy - radius, 2 * radius, 2 * radius)
