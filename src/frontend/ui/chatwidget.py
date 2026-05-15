@@ -35,6 +35,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
+from ui import theme as theme_module
+
 OLLAMA_URL = "http://localhost:11435/api/generate"  # Use different port to avoid Docker conflict
 MODEL_NAME = "ask-gilfi"
 OLLAMA_PORT = "11435"
@@ -193,7 +195,10 @@ class ChatWidget(QWidget):
         layout.setSpacing(6)
 
         self.status_label = QLabel("Initializing Ollama... (this may take 10-15 seconds)")
-        self.status_label.setStyleSheet("color: #555570; font-size: 10px;")
+        # _status_tone tracks which palette key drives the colour; refreshed
+        # on theme change.
+        self._status_tone = "text_placeholder"
+        self._apply_status_style()
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
 
@@ -220,54 +225,75 @@ class ChatWidget(QWidget):
 
         layout.addLayout(input_row)
 
+        # Refresh inline status colors when the theme changes.
+        theme_module.signals().theme_changed.connect(
+            lambda _name: self._apply_status_style()
+        )
+
+    def _apply_status_style(self):
+        """Apply current-theme colour to the status label."""
+        palette = theme_module.current_theme()
+        color = palette.get(self._status_tone, palette["text_dim"])
+        self.status_label.setStyleSheet(f"color: {color}; font-size: 10px;")
+
+    def _palette_colors(self):
+        """Convenience: return (dim, success, error, accent) hex colours."""
+        p = theme_module.current_theme()
+        return p["text_dim"], p["success"], p["error"], p["accent"]
+
     def start_ollama(self):
         """Start Ollama server on widget initialization (in background thread)"""
         import os
         ollama_port = os.environ.get('OLLAMA_HOST', '127.0.0.1:11435').split(':')[-1]
-        
+        dim, _, _, _ = self._palette_colors()
+
         self.chat_display.append(
-            "<span style='color:#555570;'>Starting Ollama server...</span><br>"
-            "<span style='color:#555570;'>This may take 10-15 seconds on first start.</span><br>"
-            f"<span style='color:#555570;'>Port: {ollama_port}</span>"
+            f"<span style='color:{dim};'>Starting Ollama server...</span><br>"
+            f"<span style='color:{dim};'>This may take 10-15 seconds on first start.</span><br>"
+            f"<span style='color:{dim};'>Port: {ollama_port}</span>"
         )
-        
+
         # Start Ollama in background thread to avoid blocking UI
         self.startup_worker = OllamaStartupWorker()
         self.startup_worker.startup_complete.connect(self.on_ollama_startup_complete)
         self.startup_worker.start()
-    
+
     def on_ollama_startup_complete(self, success, message):
         """Called when Ollama startup completes"""
+        dim, success_c, error_c, _ = self._palette_colors()
         if success:
             self.ollama_started = True
             self.status_label.setText("Offline Chatbot (Ollama) - Ready")
-            self.status_label.setStyleSheet("color: #4ade80; font-size: 10px;")
+            self._status_tone = "success"
+            self._apply_status_style()
             self.input_field.setEnabled(True)
             self.btn_send.setEnabled(True)
             self.chat_display.append(
-                "<span style='color:#4ade80;'>✓ Ollama started successfully!</span><br>"
-                "<span style='color:#555570;'>You can now chat with Gilfi.</span>"
+                f"<span style='color:{success_c};'>✓ Ollama started successfully!</span><br>"
+                f"<span style='color:{dim};'>You can now chat with Gilfi.</span>"
             )
         else:
             self.status_label.setText("Offline Chatbot (Ollama) - Error")
-            self.status_label.setStyleSheet("color: #f06b78; font-size: 10px;")
+            self._status_tone = "error"
+            self._apply_status_style()
             self.chat_display.append(
-                f"<span style='color:#f06b78;'>✗ Failed to start Ollama:</span><br>"
-                f"<span style='color:#555570;'>{escape(message)}</span><br><br>"
-                "<span style='color:#555570;'><b>Troubleshooting:</b></span><br>"
-                "<span style='color:#555570;'>1. Check if port 11435 is available</span><br>"
-                "<span style='color:#555570;'>2. Ensure Ollama binary has execute permissions</span><br>"
-                "<span style='color:#555570;'>3. Check system resources (RAM/CPU)</span><br>"
-                "<span style='color:#555570;'>4. Try restarting the application</span>"
+                f"<span style='color:{error_c};'>✗ Failed to start Ollama:</span><br>"
+                f"<span style='color:{dim};'>{escape(message)}</span><br><br>"
+                f"<span style='color:{dim};'><b>Troubleshooting:</b></span><br>"
+                f"<span style='color:{dim};'>1. Check if port 11435 is available</span><br>"
+                f"<span style='color:{dim};'>2. Ensure Ollama binary has execute permissions</span><br>"
+                f"<span style='color:{dim};'>3. Check system resources (RAM/CPU)</span><br>"
+                f"<span style='color:{dim};'>4. Try restarting the application</span>"
             )
 
     def send_message(self):
+        _, success_c, error_c, accent_c = self._palette_colors()
         if not self.ollama_started:
             self.chat_display.append(
-                "<span style='color:#f06b78;'>Ollama is not running. Please restart the application.</span>"
+                f"<span style='color:{error_c};'>Ollama is not running. Please restart the application.</span>"
             )
             return
-        
+
         prompt = self.input_field.text().strip()
         if not prompt:
             return
@@ -276,9 +302,9 @@ class ChatWidget(QWidget):
 
         # User input must be HTML-escaped before being inserted into the
         # rich-text QTextEdit; otherwise <img src=...> & co. fire.
-        self.chat_display.append(f"<b style='color:#53a8d8;'>You:</b> {escape(prompt)}")
+        self.chat_display.append(f"<b style='color:{accent_c};'>You:</b> {escape(prompt)}")
         self.input_field.clear()
-        self.chat_display.append("<b style='color:#4ade80;'>Gilfi:</b> ")
+        self.chat_display.append(f"<b style='color:{success_c};'>Gilfi:</b> ")
         self.btn_send.setEnabled(False)
 
         self.worker = ChatWorker(prompt)
@@ -295,7 +321,8 @@ class ChatWidget(QWidget):
         self.chat_display.ensureCursorVisible()
 
     def on_error(self, msg):
-        self.chat_display.append(f"<span style='color:#f06b78;'>{escape(msg)}</span>")
+        _, _, error_c, _ = self._palette_colors()
+        self.chat_display.append(f"<span style='color:{error_c};'>{escape(msg)}</span>")
 
     def on_finished(self):
         self.btn_send.setEnabled(True)

@@ -20,6 +20,10 @@ class GilfiAPIClient:
         """
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
+
+    def set_base_url(self, base_url: str) -> None:
+        """Update the backend base URL (e.g. when settings change)."""
+        self.base_url = base_url.rstrip('/')
     
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """
@@ -234,19 +238,24 @@ class GilfiAPIClient:
 _client_instance: Optional[GilfiAPIClient] = None
 
 
-def get_client(base_url: str = "http://localhost:8000") -> GilfiAPIClient:
+def get_client(base_url: Optional[str] = None) -> GilfiAPIClient:
     """
-    Get or create API client singleton
-    
+    Get or create API client singleton.
+
     Args:
-        base_url: Base URL of the backend API
-        
+        base_url: Optional base URL. If provided and different from the
+                  current singleton's URL, the singleton's URL is updated.
+                  Pass None to use the existing singleton (or the default
+                  if no singleton exists yet).
+
     Returns:
         GilfiAPIClient instance
     """
     global _client_instance
     if _client_instance is None:
-        _client_instance = GilfiAPIClient(base_url)
+        _client_instance = GilfiAPIClient(base_url or "http://localhost:8000")
+    elif base_url is not None and base_url.rstrip('/') != _client_instance.base_url:
+        _client_instance.set_base_url(base_url)
     return _client_instance
 
 
