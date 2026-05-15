@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import (
     Qt, QTimer, QThread, QObject, pyqtSignal, pyqtSlot, QSettings,
 )
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 
 from modules import (
     port_scanner, rsa_encryption,
@@ -120,21 +120,48 @@ class MainWindow(QMainWindow):
     # Menu / central widget / dock
     # ------------------------------------------------------------------
     def setup_menubar(self):
+        """Build the application menu bar.
+
+        macOS quirk: by default, Qt auto-migrates actions with names like
+        "Settings", "Quit", "Exit" or "About" into the application menu
+        (the one labelled with the app name in the top-left), based on
+        each action's ``menuRole``. That leaves the File/Edit/Help menus
+        looking empty and hides Settings in a place users from other
+        platforms don't expect.
+
+        We override the menu role to ``NoRole`` so the actions stay where
+        we put them — same layout on Windows, macOS and Linux. Power Mac
+        users still get the conventional Cmd+, shortcut for Settings via
+        the standard-key sequence below.
+        """
         menubar = self.menuBar()
 
         file_menu = menubar.addMenu("File")
-        file_menu.addAction("Exit").triggered.connect(self.close)
+        exit_action = file_menu.addAction("Exit")
+        exit_action.setMenuRole(QAction.MenuRole.NoRole)
+        # Cmd+Q on Mac, Ctrl+Q on Win/Linux. Qt's QuitRole would have
+        # added Cmd+Q automatically — since we disabled migration, we
+        # restore the shortcut explicitly.
+        exit_action.setShortcut(QKeySequence.StandardKey.Quit)
+        exit_action.triggered.connect(self.close)
 
         edit_menu = menubar.addMenu("Edit")
-        edit_menu.addAction("Settings ...").triggered.connect(self.open_settings)
+        settings_action = edit_menu.addAction("Settings ...")
+        settings_action.setMenuRole(QAction.MenuRole.NoRole)
+        # Cmd+, on Mac, Ctrl+, on Win/Linux (Qt picks the right one).
+        settings_action.setShortcut(QKeySequence.StandardKey.Preferences)
+        settings_action.triggered.connect(self.open_settings)
 
         view_menu = menubar.addMenu("View")
-        view_menu.addAction("Toggle Fullscreen").triggered.connect(
-            self._toggle_fullscreen
-        )
+        fullscreen_action = view_menu.addAction("Toggle Fullscreen")
+        fullscreen_action.setMenuRole(QAction.MenuRole.NoRole)
+        fullscreen_action.setShortcut(QKeySequence.StandardKey.FullScreen)
+        fullscreen_action.triggered.connect(self._toggle_fullscreen)
 
         help_menu = menubar.addMenu("Help")
-        help_menu.addAction("About Gilfi").triggered.connect(self._show_about)
+        about_action = help_menu.addAction("About Gilfi")
+        about_action.setMenuRole(QAction.MenuRole.NoRole)
+        about_action.triggered.connect(self._show_about)
 
     def setup_central(self):
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -372,12 +399,17 @@ class MainWindow(QMainWindow):
             shortcut_hint = f"{modifier}1..{modifier}{tool_count}"
         else:
             shortcut_hint = f"Ctrl+1..Ctrl+{tool_count}"
+        prefs_hint = QKeySequence(QKeySequence.StandardKey.Preferences).toString(
+            QKeySequence.SequenceFormat.NativeText
+        )
         QMessageBox.about(
             self, "About Gilfi",
             "<b>Gilfi</b> — Security Tool Suite<br>"
             "PyQt6 desktop frontend talking to a dockerized backend.<br><br>"
-            f"Use {shortcut_hint} to jump between tools.<br>"
-            "Press Escape to cancel a running task."
+            f"<b>Shortcuts:</b><br>"
+            f"  • {shortcut_hint} — jump between tools<br>"
+            f"  • {prefs_hint} — open Settings<br>"
+            f"  • Esc — cancel a running task"
         )
 
     # ------------------------------------------------------------------
