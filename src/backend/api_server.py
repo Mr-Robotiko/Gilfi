@@ -102,9 +102,9 @@ def scan_ports():
         scanner.start_scan("/app/data/ports/ports.json")
         return scanner.get_all_ports()
 
-    except Exception as e:
-        print(e)
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        app.logger.exception("Unhandled exception in /api/networking/port_scanner")
+        return jsonify({'error': 'An internal error has occurred.'}), 500
 
 @app.route('/api/hash/generate', methods=['POST'])
 def hash_generate():
