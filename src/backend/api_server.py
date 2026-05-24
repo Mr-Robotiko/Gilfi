@@ -400,7 +400,8 @@ def rsa_encrypt():
     except FileNotFoundError:
         return jsonify({'error': 'RSA binary not found', 'details': f'Could not execute {RSA_BINARY}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
+        app.logger.exception("Unexpected RSA encryption error")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/askgilfi/query', methods=['POST'])
