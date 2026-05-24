@@ -163,8 +163,8 @@ def hash_identify():
         })
     
     except Exception as e:
-        app.logger.exception("Error in /api/hash/identify")
-        return jsonify({'error': 'An internal error occurred'}), 500
+        app.logger.exception("Unhandled error in /api/hash/identify")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/hash/crack', methods=['POST'])
@@ -219,11 +219,14 @@ def hash_crack():
             })
     
     except ValueError as e:
-        return jsonify({'error': f'Unsupported hash algorithm: {algorithm}'}), 400
+        app.logger.exception("Invalid hash cracking input in /api/hash/crack")
+        return jsonify({'error': 'Unsupported hash algorithm'}), 400
     except FileNotFoundError as e:
-        return jsonify({'error': f'Wordlist not found: {wordlist}'}), 404
+        app.logger.exception("Wordlist file missing in /api/hash/crack")
+        return jsonify({'error': 'Wordlist not found'}), 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Unhandled error in /api/hash/crack")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/password/analyze', methods=['POST'])
@@ -258,7 +261,8 @@ def password_analyze():
     except TypeError as e:
         return jsonify({'error': 'Invalid password format'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Unhandled error in /api/password/analyze")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/password/generate', methods=['POST'])
