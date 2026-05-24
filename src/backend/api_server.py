@@ -256,7 +256,7 @@ def password_analyze():
     except TypeError as e:
         return jsonify({'error': 'Invalid password format'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/password/generate', methods=['POST'])
