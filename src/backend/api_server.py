@@ -136,7 +136,8 @@ def hash_generate():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Error in /api/hash/generate")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/hash/identify', methods=['POST'])
@@ -162,7 +163,8 @@ def hash_identify():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Error in /api/hash/identify")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/hash/crack', methods=['POST'])
