@@ -425,7 +425,8 @@ def askgilfi_query():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Error in /api/askgilfi/query")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/modules', methods=['GET'])
