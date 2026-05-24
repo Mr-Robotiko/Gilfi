@@ -162,7 +162,8 @@ def hash_identify():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Unexpected error in /api/hash/identify")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/hash/crack', methods=['POST'])
