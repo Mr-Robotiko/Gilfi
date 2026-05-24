@@ -163,8 +163,13 @@ def hash_identify():
         })
     
     except Exception as e:
+<<<<<<< HEAD
         app.logger.exception("Unhandled error in /api/hash/identify")
         return jsonify({'error': 'Internal server error'}), 500
+=======
+        app.logger.exception("Unexpected error in /api/hash/identify")
+        return jsonify({'error': 'An internal error occurred'}), 500
+>>>>>>> f5a841f (Potential fix for code scanning alert no. 3: Information exposure through an exception)
 
 
 @app.route('/api/hash/crack', methods=['POST'])
