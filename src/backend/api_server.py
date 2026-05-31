@@ -102,9 +102,9 @@ def scan_ports():
         scanner.start_scan("/app/data/ports/ports.json")
         return scanner.get_all_ports()
 
-    except Exception as e:
-        print(e)
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        app.logger.exception("Unhandled exception in /api/networking/port_scanner")
+        return jsonify({'error': 'An internal error has occurred.'}), 500
 
 @app.route('/api/hash/generate', methods=['POST'])
 def hash_generate():
@@ -136,7 +136,8 @@ def hash_generate():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Error in /api/hash/generate")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/hash/identify', methods=['POST'])
@@ -162,7 +163,13 @@ def hash_identify():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+<<<<<<< HEAD
+        app.logger.exception("Unhandled error in /api/hash/identify")
+        return jsonify({'error': 'Internal server error'}), 500
+=======
+        app.logger.exception("Unexpected error in /api/hash/identify")
+        return jsonify({'error': 'An internal error occurred'}), 500
+>>>>>>> f5a841f (Potential fix for code scanning alert no. 3: Information exposure through an exception)
 
 
 @app.route('/api/hash/crack', methods=['POST'])
@@ -217,11 +224,14 @@ def hash_crack():
             })
     
     except ValueError as e:
-        return jsonify({'error': f'Unsupported hash algorithm: {algorithm}'}), 400
+        app.logger.exception("Invalid hash cracking input in /api/hash/crack")
+        return jsonify({'error': 'Unsupported hash algorithm'}), 400
     except FileNotFoundError as e:
-        return jsonify({'error': f'Wordlist not found: {wordlist}'}), 404
+        app.logger.exception("Wordlist file missing in /api/hash/crack")
+        return jsonify({'error': 'Wordlist not found'}), 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Unhandled error in /api/hash/crack")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/password/analyze', methods=['POST'])
@@ -389,7 +399,8 @@ def rsa_encrypt():
     except FileNotFoundError:
         return jsonify({'error': 'RSA binary not found', 'details': f'Could not execute {RSA_BINARY}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
+        app.logger.exception("Unexpected RSA encryption error")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/askgilfi/query', methods=['POST'])
@@ -425,7 +436,8 @@ def askgilfi_query():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Error in /api/askgilfi/query")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/modules', methods=['GET'])
