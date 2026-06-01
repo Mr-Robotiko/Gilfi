@@ -164,7 +164,6 @@ def hash_identify():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/hash/crack', methods=['POST'])
 def hash_crack():
     """
