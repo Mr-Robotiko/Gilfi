@@ -171,7 +171,6 @@ def hash_identify():
         return jsonify({'error': 'An internal error occurred'}), 500
 >>>>>>> f5a841f (Potential fix for code scanning alert no. 3: Information exposure through an exception)
 
-
 @app.route('/api/hash/crack', methods=['POST'])
 def hash_crack():
     """
