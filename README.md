@@ -4,40 +4,24 @@ Gilfi is a comprehensive security and network analysis toolkit with an AI-powere
 
 ![logo](data/assets/logo.jpeg)
 
+> [!NOTE]
+> Gilfi follows a client-server architecture with clear separation between frontend (PyQt6) and backend (FastAPI).
+
 ## Table of Contents
 
-- [Gilfi - Security \& Network Analysis Toolkit](#gilfi---security--network-analysis-toolkit)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Architecture](#architecture)
-    - [Component Overview](#component-overview)
-    - [Communication Flow](#communication-flow)
-    - [Deployment Options](#deployment-options)
-  - [Project Structure](#project-structure)
-  - [Prerequisites](#prerequisites)
-    - [Required Software](#required-software)
-      - [1. Python 3.8 or Higher](#1-python-38-or-higher)
-      - [2. Container Runtime (choose one)](#2-container-runtime-choose-one)
-      - [3. Python Virtual Environment (Recommended)](#3-python-virtual-environment-recommended)
-    - [Python Dependencies](#python-dependencies)
-    - [System Requirements](#system-requirements)
-    - [Port Requirements](#port-requirements)
-  - [Quick Start](#quick-start)
-    - [Option 1: Using Docker (Recommended)](#option-1-using-docker-recommended)
-    - [Option 2: Manual Setup](#option-2-manual-setup)
-  - [Backend API](#backend-api)
-  - [Ask Gilfi AI Assistant](#ask-gilfi-ai-assistant)
-  - [Testing](#testing)
-  - [Documentation](#documentation)
-  - [Development](#development)
-    - [Backend Development](#backend-development)
-    - [Frontend Development](#frontend-development)
-  - [Docker Deployment](#docker-deployment)
-  - [License](#license)
-  - [Troubleshooting](#troubleshooting)
-    - [Backend won't start](#backend-wont-start)
-    - [Frontend can't connect to backend](#frontend-cant-connect-to-backend)
-    - [AI chatbot not responding](#ai-chatbot-not-responding)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Backend API](#backend-api)
+- [Ask Gilfi AI Assistant](#ask-gilfi-ai-assistant)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Docker Deployment](#docker-deployment)
+- [License](#license)
+- [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -86,44 +70,48 @@ Gilfi follows a client-server architecture with clear separation between fronten
 └───────────────────────────────────────────────────────────────┘
 ```
 
-### Component Overview
+<details>
+<summary><b>Component Overview</b></summary>
 
-- **Frontend (PyQt6 GUI)**:
-  - User interface with modular tool pages
-  - API client for backend communication
-  - Real-time chat interface for AI assistant
+### Frontend (PyQt6 GUI)
+- User interface with modular tool pages
+- API client for backend communication
+- Real-time chat interface for AI assistant
 
-- **Backend (FastAPI Server)**:
-  - RESTful API endpoints for all features
-  - Modular architecture with independent modules
-  - Async request handling for better performance
+### Backend (FastAPI Server)
+- RESTful API endpoints for all features
+- Modular architecture with independent modules
+- Async request handling for better performance
 
-- **Hash Module**:
-  - Hash generation (MD5, SHA-1, SHA-256, SHA-512, etc.)
-  - Hash type identification
-  - Advanced dictionary-based hash cracking with 60+ transformation rules
-  - Hashcat/John the Ripper-inspired wordlist shuffler
-  - Performance optimizations (caching, batching, early termination)
+### Hash Module
+- Hash generation (MD5, SHA-1, SHA-256, SHA-512, etc.)
+- Hash type identification
+- Advanced dictionary-based hash cracking with 60+ transformation rules
+- Hashcat/John the Ripper-inspired wordlist shuffler
+- Performance optimizations (caching, batching, early termination)
 
-- **Password Analyzer Module**:
-  - Comprehensive password strength analysis (VERY_WEAK to VERY_STRONG)
-  - Scoring system (0-100) based on multiple security criteria
-  - Character analysis and pattern detection
-  - Cryptographically secure password generation
-  - Customizable password generation options
-  - Real-time strength feedback
+### Password Analyzer Module
+- Comprehensive password strength analysis (VERY_WEAK to VERY_STRONG)
+- Scoring system (0-100) based on multiple security criteria
+- Character analysis and pattern detection
+- Cryptographically secure password generation
+- Customizable password generation options
+- Real-time strength feedback
 
-- **Network Module**:
-  - Network device discovery
-  - Port scanning with service detection
-  - Hostname resolution
+### Network Module
+- Network device discovery
+- Port scanning with service detection
+- Hostname resolution
 
-- **Ask Gilfi Module**:
-  - Ollama integration for local LLM
-  - Custom-trained security assistant model
-  - Context-aware responses
+### Ask Gilfi Module
+- Ollama integration for local LLM
+- Custom-trained security assistant model
+- Context-aware responses
 
-### Communication Flow
+</details>
+
+<details>
+<summary><b>Communication Flow</b></summary>
 
 1. User interacts with PyQt6 frontend
 2. Frontend sends HTTP requests to FastAPI backend
@@ -131,11 +119,16 @@ Gilfi follows a client-server architecture with clear separation between fronten
 4. Results are returned as JSON responses
 5. Frontend displays results to user
 
-### Deployment Options
+</details>
+
+<details>
+<summary><b>Deployment Options</b></summary>
 
 - **Development**: Frontend and backend run as separate Python processes
 - **Production**: Backend containerized with Docker, frontend runs natively
 - **Full Docker**: Both frontend and backend can be containerized (optional)
+
+</details>
 
 ## Project Structure
 
@@ -160,14 +153,19 @@ Gilfi/
 
 ## Prerequisites
 
-### Required Software
+> [!IMPORTANT]
+> Ensure you have Python 3.8+ and a container runtime (Docker or Podman) installed before proceeding.
 
-#### 1. Python 3.8 or Higher
+<details>
+<summary><b>Required Software</b></summary>
+
+### 1. Python 3.8 or Higher
 - **macOS**: `brew install python3`
 - **Linux (Ubuntu/Debian)**: `sudo apt install python3 python3-pip python3-venv`
 - **Windows**: Download from [python.org](https://www.python.org/downloads/)
 
-#### 2. Container Runtime (choose one)
+### 2. Container Runtime (choose one)
+
 **Docker (Recommended)**:
 - **macOS**: `brew install --cask docker` or download [Docker Desktop](https://www.docker.com/products/docker-desktop)
 - **Linux**: `sudo apt install docker.io docker-compose`
@@ -178,34 +176,54 @@ Gilfi/
 - **Linux**: `sudo apt install podman podman-compose`
 - **Windows**: Download [Podman Desktop](https://podman.io/getting-started/installation)
 
-#### 3. Python Virtual Environment (Recommended)
+### 3. Python Virtual Environment (Recommended)
 ```bash
 python3 -m venv gilfi
 source gilfi/bin/activate  # Linux/Mac
 # gilfi\Scripts\activate   # Windows
 ```
 
-### Python Dependencies
+</details>
+
+<details>
+<summary><b>Python Dependencies</b></summary>
+
 The following packages will be installed via `requirements.txt`:
 - PyQt6==6.11.0 (GUI Framework)
 - pyqt6_sip==13.11.1 (PyQt6 Support)
 - Requests==2.33.1 (HTTP Client)
 
-### System Requirements
+</details>
+
+<details>
+<summary><b>System Requirements</b></summary>
+
 - **RAM**: Minimum 4GB (8GB recommended for AI chatbot)
 - **Disk Space**: ~2GB for Ollama models
 - **OS**: Linux, macOS, or Windows
 
-### Port Requirements
+</details>
+
+<details>
+<summary><b>Port Requirements</b></summary>
+
 The following ports must be available:
 - **8000**: Backend API Server
 - **11434**: System Ollama (if installed separately)
 - **11435**: Local Ollama (Frontend)
 - **11436**: Docker Ollama (Backend)
 
+</details>
+
 ## Quick Start
 
+> [!TIP]
+> Using Docker is the recommended approach for running the backend as it handles all dependencies automatically.
+
 ### Option 1: Using Docker (Recommended)
+
+<details>
+<summary><b>Step-by-Step Instructions</b></summary>
 
 1. **Start the Backend**:
    ```bash
@@ -225,7 +243,12 @@ The following ports must be available:
    run-gilfi.bat
    ```
 
+</details>
+
 ### Option 2: Manual Setup
+
+<details>
+<summary><b>Step-by-Step Instructions</b></summary>
 
 1. **Install Dependencies**:
    ```bash
@@ -244,37 +267,48 @@ The following ports must be available:
    python main.py
    ```
 
+</details>
+
 ## Backend API
 
 The backend runs on `http://localhost:8000` and provides the following endpoints:
 
-**General**:
+> [!NOTE]
+> API documentation is available at `http://localhost:8000/docs` when the backend is running.
+
+<details>
+<summary><b>Available Endpoints</b></summary>
+
+### General
 - `GET /health` - Health check
 - `GET /api/modules` - List available modules
 
-**Hash Module**:
+### Hash Module
 - `POST /api/hash/generate` - Generate hashes
 - `POST /api/hash/identify` - Identify hash types
 - `POST /api/hash/crack` - Crack password hashes (with advanced rule-based transformations)
 
-**Password Module**:
+### Password Module
 - `POST /api/password/analyze` - Analyze password strength
 - `POST /api/password/generate` - Generate secure random passwords
 
-**Network Module**:
+### Network Module
 - `POST /api/networking/port_scanner` - Scan ports on a target
 
-**RSA Module**:
+### RSA Module
 - `POST /api/rsa/encrypt` - RSA encryption/decryption
 
-**AI Assistant**:
+### AI Assistant
 - `POST /api/askgilfi/query` - AI chatbot interactions
 
-API documentation is available at `http://localhost:8000/docs` when the backend is running.
+</details>
 
 ## Ask Gilfi AI Assistant
 
 The AI chatbot uses Ollama with a custom-trained model. The backend automatically manages the Ollama service and model loading. The chatbot can answer security-related questions and provide guidance on using the toolkit.
+
+> [!WARNING]
+> First startup may take time as the Ollama service initializes and downloads the model. Ensure you have sufficient system resources (8GB RAM recommended).
 
 ## Testing
 
@@ -299,7 +333,8 @@ run_tests.bat
 
 ## Development
 
-### Backend Development
+<details>
+<summary><b>Backend Development</b></summary>
 
 The backend is built with FastAPI and can be run in development mode:
 
@@ -308,7 +343,10 @@ cd src/backend
 uvicorn api_server:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend Development
+</details>
+
+<details>
+<summary><b>Frontend Development</b></summary>
 
 The frontend uses PyQt6. To run in development mode:
 
@@ -316,6 +354,8 @@ The frontend uses PyQt6. To run in development mode:
 cd src/frontend
 python main.py
 ```
+
+</details>
 
 ## Docker Deployment
 
@@ -337,17 +377,34 @@ See [LICENSE](LICENSE) file for details.
 
 ## Troubleshooting
 
-### Backend won't start
+<details>
+<summary><b>Backend won't start</b></summary>
+
 - Ensure port 8000 is not in use
 - Check Docker is running (if using Docker)
 - Verify all dependencies are installed
 
-### Frontend can't connect to backend
+</details>
+
+<details>
+<summary><b>Frontend can't connect to backend</b></summary>
+
 - Ensure backend is running on `http://localhost:8000`
 - Check firewall settings
 - Verify API endpoint in `src/frontend/api_client.py`
 
-### AI chatbot not responding
+</details>
+
+<details>
+<summary><b>AI chatbot not responding</b></summary>
+
 - Wait for Ollama service to fully initialize (first startup may take time)
 - Check backend logs for Ollama status
 - Ensure sufficient system resources (RAM/CPU)
+
+</details>
+
+---
+
+> [!TIP]
+> For more detailed information, check out the [documentation](documentation/) folder or visit the API docs at `http://localhost:8000/docs` when running the backend.
