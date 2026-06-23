@@ -1,6 +1,6 @@
 """
 Gilfi Module - Hash Generator & Identifier
-Uses backend API via api_client instead of direct imports.
+Hashing and hash-type identification, performed by the backend API.
 """
 
 from ui.toolpage import ToolPage
@@ -10,7 +10,21 @@ import api_client
 def create_page():
     page = ToolPage(
         title="Hash Module",
-        description="Computes MD5, SHA-1, SHA-256 and more. Can also identify hash types."
+        description="Computes MD5, SHA-1, SHA-256 and more. Can also identify hash types.",
+        help_text=(
+            "Two modes:\n\n"
+            "  • hash: turn arbitrary text into a fixed-length fingerprint. "
+            "Same input always produces the same hash, but the hash can't be "
+            "reversed back to the input.\n"
+            "  • identify: take a hash and guess which algorithm produced it "
+            "(based on length and character set).\n\n"
+            "Fields:\n"
+            "  • Input — the text to hash, or the hash to identify.\n"
+            "  • Algorithm — md5, sha1, sha256, sha512, … (default sha256).\n"
+            "  • Mode — 'hash' or 'identify' (default hash).\n\n"
+            "Hashes are everywhere: password storage, file integrity, "
+            "blockchains."
+        )
     )
     page.add_field("Input", "Text to hash or hash to identify")
     page.add_field("Algorithm", "e.g. md5, sha1, sha256 (default: sha256)")
@@ -38,48 +52,36 @@ def run(page):
 
 
 def _run_hash(page, text, algo):
-    page.set_status("Computing ...")
-    try:
-        # Use API client instead of direct import
-        result = api_client.hash_generate(text, algo)
-        
-        page.append_output(f"Input:     {text}")
-        page.append_output(f"Algorithm: {algo.upper()}")
-        page.append_output("─" * 40)
-        page.append_output(f"Hash:      {result}")
-        page.set_status("Done")
-    except ConnectionError as e:
-        page.set_status("Backend not available", error=True)
-        page.append_output(str(e))
-        page.append_output("\nMake sure the backend container is running:")
-        page.append_output("  ./backend-docker.sh start")
-    except Exception as e:
-        page.set_status("Error", error=True)
-        page.append_output(f"Error: {str(e)}")
+    page.run_async(
+        work_fn=lambda: api_client.hash_generate(text, algo),
+        on_success=lambda result: _show_hash_result(page, text, algo, result),
+        running_text="Computing ...",
+        done_text="Done",
+    )
+
+
+def _show_hash_result(page, text, algo, result):
+    page.append_dim(f"Input:     {text}")
+    page.append_dim(f"Algorithm: {algo.upper()}")
+    page.append_dim("─" * 40)
+    page.append_success(f"Hash:      {result}")
 
 
 def _run_identify(page, hash_value):
-    page.set_status("Identifying ...")
-    try:
-        # Use API client instead of direct import
-        possible_types = api_client.hash_identify(hash_value)
-        
-        page.append_output(f"Hash:      {hash_value}")
-        page.append_output("─" * 40)
-        
-        if possible_types:
-            page.append_output("Possible hash types:")
-            for hash_type in possible_types:
-                page.append_output(f"  • {hash_type}")
-        else:
-            page.append_output("Could not identify hash type")
-        
-        page.set_status("Done")
-    except ConnectionError as e:
-        page.set_status("Backend not available", error=True)
-        page.append_output(str(e))
-        page.append_output("\nMake sure the backend container is running:")
-        page.append_output("  ./backend-docker.sh start")
-    except Exception as e:
-        page.set_status("Error", error=True)
-        page.append_output(f"Error: {str(e)}")
+    page.run_async(
+        work_fn=lambda: api_client.hash_identify(hash_value),
+        on_success=lambda result: _show_identify_result(page, hash_value, result),
+        running_text="Identifying ...",
+        done_text="Done",
+    )
+
+
+def _show_identify_result(page, hash_value, possible_types):
+    page.append_dim(f"Hash:      {hash_value}")
+    page.append_dim("─" * 40)
+    if possible_types:
+        page.append_output("Possible hash types:")
+        for hash_type in possible_types:
+            page.append_accent(f"  • {hash_type}")
+    else:
+        page.append_warning("Could not identify hash type")
