@@ -34,6 +34,9 @@ Cross-platform target: Windows, macOS and Linux. The codebase avoids platform-sp
 
 ## Directory Structure
 
+<details>
+<summary><b>Click to expand &mdash; Directory Structure</b></summary>
+
 ```
 src/frontend/
 ├── main.py                      # Application entry point
@@ -61,9 +64,14 @@ src/frontend/
 
 > **Asset dependency:** `animated_logo.py` reads `<project-root>/data/assets/logo.jpeg` at startup. If the file is missing or unreadable, the widget falls back to a text rendering of "GILFI" — the GUI still works.
 
+</details>
+
 ---
 
 ## Setup
+
+<details>
+<summary><b>Click to expand &mdash; Setup</b></summary>
 
 ### Dependencies
 
@@ -95,51 +103,43 @@ Ollama is bootstrapped from inside the frontend itself: on launch, `ChatWidget` 
 
 For setting up the actual backend container, see the **project root `README.md`**.
 
+</details>
+
 ---
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                              main.py                                 │
-│                       (Application Entry)                            │
-│                                │                                     │
-│   load saved theme via QSettings → set_active_theme()                │
-│   build_stylesheet() → app.setStyleSheet(...)                        │
-│                                │                                     │
-│                  ┌─────────────▼──────────────┐                      │
-│                  │         MainWindow         │                      │
-│                  │       (QMainWindow)        │                      │
-│                  └──┬───────┬───────┬─────┬───┘                      │
-│                     │       │       │     │                          │
-│        ┌────────────▼─┐ ┌───▼────┐ ┌▼─────▼──────┐ ┌───────────────┐ │
-│        │  QListWidget │ │QStack- │ │ QStatusBar  │ │ QDockWidget   │ │
-│        │  (nav_list)  │ │ ed-    │ │             │ │ (chatDock)    │ │
-│        │              │ │Widget  │ │ ● backend   │ │               │ │
-│        │ - Port       │ │        │ │ ▤ progress  │ │ ChatWidget    │ │
-│        │ - RSA        │ │  Tool  │ │ │           │ │               │ │
-│        │ - Hash       │◄┤  Pages │ │ │           │ │               │ │
-│        │ - HashCrack  │ │        │ │ │           │ │               │ │
-│        │ - Password   │ │        │ └─┼───────────┘ └───────┬───────┘ │
-│        │ - Arcade     │ │        │   │                     │         │
-│        └──────┬───────┘ └───┬────┘   │                     │         │
-│               │             │        │                     │         │
-│               │ NavItem-    │ status / busy signals        │ stream  │
-│               │ Delegate    │                              │         │
-│               │ (pulsing    │  ┌──────────────────┐        │         │
-│               │   dot)      │  │ _HeartbeatWorker │        │         │
-│               │             │  │   /health        │        │         │
-│               │             │  └────────┬─────────┘        │         │
-│               │             │           │                  │         │
-│               │             └─►  GilfiAPIClient  ◄─────────┘         │
-│               │                         │                            │
-│               │                         ▼                            │
-│               │                  localhost:8000      localhost:11435 │
-│               │                  (Backend API)         (Ollama)      │
-│               │                                                      │
-│               │  theme_module.signals().theme_changed                │
-│               └──── propagates palette refresh ──── all widgets      │
-└──────────────────────────────────────────────────────────────────────┘
+<details>
+<summary><b>Click to expand &mdash; Architecture</b></summary>
+
+```mermaid
+flowchart TB
+    Entry["<b>main.py</b> — Application Entry<br/>load theme via QSettings → set_active_theme()<br/>build_stylesheet() → app.setStyleSheet()"]
+    Entry --> MW
+
+    subgraph MW["MainWindow · QMainWindow"]
+        Nav["QListWidget · nav_list<br/>Port · RSA · Hash · HashCrack · Password · Arcade"]
+        Stack["QStackedWidget<br/>Tool Pages"]
+        Status["QStatusBar<br/>● backend · ▤ progress · current tool"]
+        Dock["QDockWidget · chatDock<br/>ChatWidget"]
+    end
+
+    Delegate["NavItemDelegate<br/>pulsing busy dot"]
+    HB["_HeartbeatWorker<br/>GET /health"]
+    API["GilfiAPIClient"]
+    Backend[("localhost:8000<br/>Backend API")]
+    Ollama[("localhost:11435<br/>Ollama")]
+    Theme["theme.signals()<br/>theme_changed"]
+
+    Nav -->|select row| Stack
+    Delegate -.->|paints dot on| Nav
+    Stack -->|status / busy signals| Status
+    Status --> HB
+    Stack --> API
+    HB --> API
+    API --> Backend
+    Dock -->|stream tokens| Ollama
+    Theme -.->|palette refresh| MW
 ```
 
 The left navigation (`QListWidget`) controls which page is shown in the `QStackedWidget`. A custom `NavItemDelegate` paints a pulsing dot next to any tool that is currently running a background job. The status bar shows backend connectivity on the left, an indeterminate progress bar while any tool page is busy, and the current tool name on the right.
@@ -148,9 +148,14 @@ The Ask Gilfi chatbot lives in a `QDockWidget` that can be toggled, moved, or cl
 
 All tool modules access the backend through `api_client.py`, which wraps the REST endpoints exposed by the backend.
 
+</details>
+
 ---
 
 ## Class Diagram
+
+<details>
+<summary><b>Click to expand &mdash; Class Diagram</b></summary>
 
 ```mermaid
 classDiagram
@@ -344,9 +349,14 @@ classDiagram
     BaseGame "1" *-- "1" PillHeader : header
 ```
 
+</details>
+
 ---
 
 ## Component Overview
+
+<details>
+<summary><b>Click to expand &mdash; Component Overview</b></summary>
 
 | Component | File | Responsibility |
 |---|---|---|
@@ -367,9 +377,14 @@ classDiagram
 | `GilfiAPIClient` | `api_client.py` | Central HTTP client for all backend endpoints |
 | `theme` module | `ui/theme.py` | Theme palettes (dark / light / hacker), global QSS template, `theme_changed` signal |
 
+</details>
+
 ---
 
 ## Tool Modules
+
+<details>
+<summary><b>Click to expand &mdash; Tool Modules</b></summary>
 
 The frontend registers six tools in the navigation list. Five are standard `ToolPage`-based modules; the Arcade is a custom widget.
 
@@ -384,9 +399,14 @@ The frontend registers six tools in the navigation list. Five are standard `Tool
 
 Each `ToolPage`-based module surfaces a `?` help button next to the title that opens a contextual dialog. Long-running operations use `ToolPage.run_async()`, which morphs the Run button into a Cancel button while the job is in flight.
 
+</details>
+
 ---
 
 ## Arcade
+
+<details>
+<summary><b>Click to expand &mdash; Arcade</b></summary>
 
 The Arcade is a card-based launcher backed by a `QStackedWidget`. The home page shows three category sections (Cryptography, Hashing, Defense) with cards inside each. Clicking a card pushes that game's page onto the stack with a "← Back to Arcade" button at the top.
 
@@ -403,9 +423,14 @@ Each game inherits from `BaseGame`, which provides a compact `PillHeader` (`Game
 | **Port Knocker** | Defense | no | Pick the standard port for a service. Easy (5 services) / Hard (15 services) |
 | **Password Anatomy** | Defense | no | Identify the main weakness of a weak password. Easy / Hard difficulty; "Send to Password Analyzer" forwards the password |
 
+</details>
+
 ---
 
 ## Flow Charts
+
+<details>
+<summary><b>Click to expand &mdash; Flow Charts</b></summary>
 
 ### Application Startup
 
@@ -538,9 +563,14 @@ flowchart TD
     K --> L[Re-enable Send button]
 ```
 
+</details>
+
 ---
 
 ## Module Interface
+
+<details>
+<summary><b>Click to expand &mdash; Module Interface</b></summary>
 
 Every standard tool module follows the same pattern. To add a new module:
 
@@ -649,9 +679,14 @@ For non-standard pages (such as the Arcade), modules can return any `QWidget` su
 
 The base URL defaults to `http://localhost:8000`. `get_client(base_url=...)` updates the singleton's URL live — used by the Settings dialog when the user changes the backend endpoint.
 
+</details>
+
 ---
 
 ## Cross-Module Communication
+
+<details>
+<summary><b>Click to expand &mdash; Cross-Module Communication</b></summary>
 
 The Arcade forwards data into other tool pages. For example, the Hash Hunter game sends its current target hash into the Hash Module (or the Hash Crack Module) with one click, and Password Anatomy can pipe its puzzle password into the Password Analyzer.
 
@@ -668,9 +703,14 @@ def _send_to_module(widget, module_name, field_values, auto_run=False):
 
 This keeps modules independent (no direct imports between them) while still allowing them to cooperate. If a target module is missing, the call fails gracefully and shows a status-bar message.
 
+</details>
+
 ---
 
 ## Threading Model
+
+<details>
+<summary><b>Click to expand &mdash; Threading Model</b></summary>
 
 Long-running operations use `QThread` to keep the GUI responsive:
 
@@ -710,9 +750,14 @@ GUI animations don't use `QThread` — they would have to bounce back to the mai
 
 Each tick is cheap (a few floats + an `update()`), so this stays smooth without blocking event handling.
 
+</details>
+
 ---
 
 ## Theme System
+
+<details>
+<summary><b>Click to expand &mdash; Theme System</b></summary>
 
 `ui/theme.py` holds three palettes (`dark`, `light`, `hacker`) as plain dicts of colour tokens, plus a single QSS template that gets formatted against the chosen palette by `build_stylesheet()`.
 
@@ -775,9 +820,14 @@ The three built-in themes:
 | `light` | `#f5f5fa` near-white | `#1a1a2e` deep navy | `#3a7ca5` steel blue |
 | `hacker` | `#000000` black | `#39ff14` neon green | `#39ff14` neon green |
 
+</details>
+
 ---
 
 ## Settings
+
+<details>
+<summary><b>Click to expand &mdash; Settings</b></summary>
 
 `Edit → Settings ...` opens the modal `SettingsDialog`. Keys persist via `QSettings` under the application's standard OS location.
 
@@ -790,9 +840,14 @@ The three built-in themes:
 
 The Settings dialog also has a **Reset best scores …** button that wipes every key under the `arcade/` group after a confirmation dialog. This clears all per-game best scores and last-played timestamps.
 
+</details>
+
 ---
 
 ## Status Bar
+
+<details>
+<summary><b>Click to expand &mdash; Status Bar</b></summary>
 
 The status bar has four content areas:
 
@@ -811,9 +866,14 @@ The status bar has four content areas:
 
 Transient messages from tool pages (`set_status` → `status_changed` signal → status bar `showMessage`) appear in the middle and auto-expire after 4–6 seconds. Status bar broadcasts from the Arcade ("★ New best in Hash Hunter: 1240") use the same channel.
 
+</details>
+
 ---
 
 ## Keyboard Shortcuts
+
+<details>
+<summary><b>Click to expand &mdash; Keyboard Shortcuts</b></summary>
 
 All shortcuts use platform-conditional modifiers: on macOS `Ctrl` is rendered and bound as `⌘ Cmd`, on Windows / Linux as `Ctrl`. The About dialog displays the platform-native form.
 
@@ -825,9 +885,14 @@ All shortcuts use platform-conditional modifiers: on macOS `Ctrl` is rendered an
 | `1` … `4` | Click the Nth button in the active arcade game | Port Knocker, Password Anatomy, Hash Speed Sort |
 | `Enter` | Submit the current field | Game-specific (Crack the Code, Factorize!, RSA Speedrun, Survive the Cracker) |
 
+</details>
+
 ---
 
 ## Cross-Platform Notes
+
+<details>
+<summary><b>Click to expand &mdash; Cross-Platform Notes</b></summary>
 
 The codebase targets Windows, macOS and Linux without per-OS forks. Specific decisions that keep the three behaviours identical:
 
@@ -839,3 +904,5 @@ The codebase targets Windows, macOS and Linux without per-OS forks. Specific dec
 - **Menu bar.** Plain titles ("File", "Edit", etc.) — padding comes from `QMenuBar::item` in the QSS, not from leading/trailing spaces in the title string. On macOS the menu bar lives in the global system bar (top of the screen) when the app has focus; Qt handles that automatically. Every menu action sets `setMenuRole(QAction.MenuRole.NoRole)` to **disable** Qt's default auto-migration of items named "Settings", "Quit", "About" etc. into the macOS application menu — that migration would leave the File/Edit/Help menus looking empty and hide Settings in a place users coming from other platforms don't expect. Standard shortcuts (`QKeySequence.StandardKey.Preferences`, `.Quit`, `.FullScreen`) restore the conventional Cmd+,  / Cmd+Q / Cmd+Ctrl+F bindings on Mac so power users still have the platform shortcuts.
 - **High-DPI.** Qt6 auto-scaling is enabled by default. Card sizes (230×175 px) and font point sizes scale correctly on Retina / 4K displays. The card grid auto-reflows between 1, 2, 3 and 4 columns at the 600 / 900 / 1200 px breakpoints.
 - **`QSettings` storage.** Uses platform-native backing: Windows registry, macOS plist, Linux config file. No code path touches a hardcoded file path.
+
+</details>
