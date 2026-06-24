@@ -30,6 +30,8 @@ The frontend runs **natively** on the user's machine and talks to the backend ov
 
 Cross-platform target: Windows, macOS and Linux. The codebase avoids platform-specific Qt features and uses property-driven QSS plus platform-conditional modifier keys.
 
+---
+
 ## Directory Structure
 
 ```
@@ -44,6 +46,7 @@ src/frontend/
 │   ├── toolpage.py              # Reusable widget template for tool modules
 │   ├── chatwidget.py            # Ask Gilfi chat interface (Ollama API)
 │   ├── theme.py                 # Theme system (dark/light/hacker) + global QSS template
+│   ├── style.py                 # Precomputed global stylesheet (thin build_stylesheet wrapper)
 │   ├── settings_dialog.py       # User preferences dialog
 │   └── nav_delegate.py          # Custom delegate that animates a "busy" dot on nav items
 └── modules/
@@ -57,6 +60,8 @@ src/frontend/
 ```
 
 > **Asset dependency:** `animated_logo.py` reads `<project-root>/data/assets/logo.jpeg` at startup. If the file is missing or unreadable, the widget falls back to a text rendering of "GILFI" — the GUI still works.
+
+---
 
 ## Setup
 
@@ -89,6 +94,8 @@ Both services are optional — the GUI launches and renders the splash regardles
 Ollama is bootstrapped from inside the frontend itself: on launch, `ChatWidget` spawns an `OllamaStartupWorker` that calls into the bundled Ollama binary (resolved via the project's `ask-gilfi-module`) and brings up a server on `:11435`. That means the chat dock is normally usable without manual Ollama setup, as long as the project layout is intact.
 
 For setting up the actual backend container, see the **project root `README.md`**.
+
+---
 
 ## Architecture
 
@@ -140,6 +147,8 @@ The left navigation (`QListWidget`) controls which page is shown in the `QStacke
 The Ask Gilfi chatbot lives in a `QDockWidget` that can be toggled, moved, or closed independently.
 
 All tool modules access the backend through `api_client.py`, which wraps the REST endpoints exposed by the backend.
+
+---
 
 ## Class Diagram
 
@@ -335,6 +344,8 @@ classDiagram
     BaseGame "1" *-- "1" PillHeader : header
 ```
 
+---
+
 ## Component Overview
 
 | Component | File | Responsibility |
@@ -356,6 +367,8 @@ classDiagram
 | `GilfiAPIClient` | `api_client.py` | Central HTTP client for all backend endpoints |
 | `theme` module | `ui/theme.py` | Theme palettes (dark / light / hacker), global QSS template, `theme_changed` signal |
 
+---
+
 ## Tool Modules
 
 The frontend registers six tools in the navigation list. Five are standard `ToolPage`-based modules; the Arcade is a custom widget.
@@ -364,12 +377,14 @@ The frontend registers six tools in the navigation list. Five are standard `Tool
 |---|---|---|
 | **Port Scanner** | yes | Scans TCP/UDP ports on a given target. Results render in a sortable `QTableWidget` with colour-coded open/closed states |
 | **RSA Encryption** | yes | Encrypts and decrypts integer messages via the backend's RSA endpoint |
-| **Hash Module** | yes | Generates and identifies hashes (MD5, SHA-1, SHA-256, ...) |
+| **Hash Module** | yes | Generates and identifies hashes (MD5, SHA-1, SHA-256, SHA-512) |
 | **Hash Crack Module** | yes | Dictionary-based cracking against `rockyou.txt` |
 | **Password Analyzer** | yes | Strength analysis (entropy, common-pattern detection) and cryptographically secure password generation |
 | **Arcade** | partial | Eight mini-games, see below |
 
 Each `ToolPage`-based module surfaces a `?` help button next to the title that opens a contextual dialog. Long-running operations use `ToolPage.run_async()`, which morphs the Run button into a Cancel button while the job is in flight.
+
+---
 
 ## Arcade
 
@@ -387,6 +402,8 @@ Each game inherits from `BaseGame`, which provides a compact `PillHeader` (`Game
 | **Survive the Cracker** | Hashing | yes | Type a password; it is hashed locally with SHA-256 and the hash is sent to `api_client.hash_crack`. Three outcomes: cracked, survived, or backend offline. Has its own cancel button |
 | **Port Knocker** | Defense | no | Pick the standard port for a service. Easy (5 services) / Hard (15 services) |
 | **Password Anatomy** | Defense | no | Identify the main weakness of a weak password. Easy / Hard difficulty; "Send to Password Analyzer" forwards the password |
+
+---
 
 ## Flow Charts
 
@@ -521,6 +538,8 @@ flowchart TD
     K --> L[Re-enable Send button]
 ```
 
+---
+
 ## Module Interface
 
 Every standard tool module follows the same pattern. To add a new module:
@@ -530,7 +549,6 @@ Every standard tool module follows the same pattern. To add a new module:
 ```python
 from ui.toolpage import ToolPage
 import api_client
-
 
 def create_page():
     page = ToolPage(
@@ -545,7 +563,6 @@ def create_page():
     page.set_button_text("Run")
     page.on_run = run
     return page
-
 
 def run(page):
     value = page.get_input("Some Input")
@@ -632,6 +649,8 @@ For non-standard pages (such as the Arcade), modules can return any `QWidget` su
 
 The base URL defaults to `http://localhost:8000`. `get_client(base_url=...)` updates the singleton's URL live — used by the Settings dialog when the user changes the backend endpoint.
 
+---
+
 ## Cross-Module Communication
 
 The Arcade forwards data into other tool pages. For example, the Hash Hunter game sends its current target hash into the Hash Module (or the Hash Crack Module) with one click, and Password Anatomy can pipe its puzzle password into the Password Analyzer.
@@ -648,6 +667,8 @@ def _send_to_module(widget, module_name, field_values, auto_run=False):
 ```
 
 This keeps modules independent (no direct imports between them) while still allowing them to cooperate. If a target module is missing, the call fails gracefully and shows a status-bar message.
+
+---
 
 ## Threading Model
 
@@ -688,6 +709,8 @@ GUI animations don't use `QThread` — they would have to bounce back to the mai
 | `ConfettiOverlay` (arcade) | 33 ms (~30 fps) | particle physics for new-best celebration |
 
 Each tick is cheap (a few floats + an `update()`), so this stays smooth without blocking event handling.
+
+---
 
 ## Theme System
 
@@ -752,6 +775,8 @@ The three built-in themes:
 | `light` | `#f5f5fa` near-white | `#1a1a2e` deep navy | `#3a7ca5` steel blue |
 | `hacker` | `#000000` black | `#39ff14` neon green | `#39ff14` neon green |
 
+---
+
 ## Settings
 
 `Edit → Settings ...` opens the modal `SettingsDialog`. Keys persist via `QSettings` under the application's standard OS location.
@@ -764,6 +789,8 @@ The three built-in themes:
 | `backend/heartbeat_interval_ms` | int | `10_000` | Interval between `/health` probes |
 
 The Settings dialog also has a **Reset best scores …** button that wipes every key under the `arcade/` group after a confirmation dialog. This clears all per-game best scores and last-played timestamps.
+
+---
 
 ## Status Bar
 
@@ -784,6 +811,8 @@ The status bar has four content areas:
 
 Transient messages from tool pages (`set_status` → `status_changed` signal → status bar `showMessage`) appear in the middle and auto-expire after 4–6 seconds. Status bar broadcasts from the Arcade ("★ New best in Hash Hunter: 1240") use the same channel.
 
+---
+
 ## Keyboard Shortcuts
 
 All shortcuts use platform-conditional modifiers: on macOS `Ctrl` is rendered and bound as `⌘ Cmd`, on Windows / Linux as `Ctrl`. The About dialog displays the platform-native form.
@@ -795,6 +824,8 @@ All shortcuts use platform-conditional modifiers: on macOS `Ctrl` is rendered an
 | `1` … `9` | Click the Nth tile in the active arcade game | Hash Hunter (3×3 grid) |
 | `1` … `4` | Click the Nth button in the active arcade game | Port Knocker, Password Anatomy, Hash Speed Sort |
 | `Enter` | Submit the current field | Game-specific (Crack the Code, Factorize!, RSA Speedrun, Survive the Cracker) |
+
+---
 
 ## Cross-Platform Notes
 
