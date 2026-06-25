@@ -1112,8 +1112,6 @@ Response:
 
 ---
 
----
-
 ## User Stories
 
 <details>
@@ -1275,8 +1273,7 @@ Response:
 
 ### Release History
 
-- **v1.0.0** (2026-05-01): Initial release
-- **v1.1.0** (2026-05-06): Password analyzer + advanced cracking
+- **v1.0.0** (2026-06-25): Initial release
 
 ---
 
@@ -1318,6 +1315,6 @@ This project is licensed under the **GNU General Public License v3.0**. See [LIC
 
 **Built for the cybersecurity community**
 
-**Final Release Documentation - 2026-06-23**
+**Final Release Documentation - 2026-06-25**
 
 </div>
