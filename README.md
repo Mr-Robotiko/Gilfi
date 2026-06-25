@@ -5,7 +5,7 @@ Gilfi is a comprehensive security and network analysis toolkit with an AI-powere
 ![logo](data/assets/logo.jpeg)
 
 > [!NOTE]
-> Gilfi follows a client-server architecture with clear separation between frontend (PyQt6) and backend (FastAPI).
+> Gilfi follows a client-server architecture with clear separation between frontend (PyQt6) and backend (Flask REST API).
 
 ---
 
@@ -33,18 +33,17 @@ Gilfi is a comprehensive security and network analysis toolkit with an AI-powere
 
 ### Network Analysis
 - **Port Scanner**: Scan network ports to identify open services (TCP/UDP)
-- **Network Scanner**: Discover active devices on local networks
-- **Hostname Resolution**: Resolve IP addresses to hostnames
+- **Hostname Resolution**: The port scanner resolves a target hostname to its IP address before scanning (used internally via `Resolver`)
 
 ### Cryptographic Operations
-- **Hash Generation**: MD5, SHA-1, SHA-256, SHA-512, and more
+- **Hash Generation**: MD5, SHA-1, SHA-256, SHA-512
 - **Hash Identification**: Automatic hash type detection
 - **Advanced Hash Cracking**: 
-  - Dictionary attacks with 60+ transformation rules
+  - Dictionary attacks with 70+ transformation rules
   - Wordlist shuffler (Hashcat/John the Ripper inspired)
   - Dual-layer caching (in-memory + SQLite)
-  - Performance: 1M+ hashes/second
-- **RSA Encryption**: Educational RSA encryption/decryption demonstration
+  - Optional multiprocessing
+- **RSA Encryption**: Educational RSA encryption/decryption demonstration (C binary)
 
 ### Password Security
 - **Password Strength Analysis**:
@@ -54,16 +53,16 @@ Gilfi is a comprehensive security and network analysis toolkit with an AI-powere
   - Actionable improvement suggestions
 - **Secure Password Generator**:
   - Cryptographically secure (using `secrets` module)
-  - Customizable length (8-128 characters)
+  - Customizable length
   - Configurable character sets
 
 ### AI Assistant
 - **Ask Gilfi**: AI-powered chatbot for security questions
 - **Local Processing**: Runs locally using Ollama for privacy
-- **Context-Aware**: Understands security concepts
+- **Model**: Custom `ask-gilfi` model (based on `granite4:350m`)
 
 ### Educational Features
-- **Arcade Mode**: Four interactive mini-games teaching security concepts
+- **Arcade Mode**: Eight interactive mini-games teaching security concepts
 
 </details>
 
@@ -91,7 +90,7 @@ Gilfi follows a client-server architecture with clear separation between fronten
 └────────────────────────────┼──────────────────────────────────┘
                              │ HTTP/REST (localhost:8000)
 ┌────────────────────────────▼──────────────────────────────────┐
-│                    Backend (FastAPI)                          │
+│                    Backend (Flask)                            │
 │  ┌──────────────────────────────────────────────────────┐     │
 │  │              API Server (api_server.py)              │     │
 │  └───┬──────────────┬──────────────┬──────────────┬─────┘     │
@@ -119,19 +118,19 @@ Gilfi follows a client-server architecture with clear separation between fronten
 Gilfi/
 ├── src/
 │   ├── backend/              # Backend API server
-│   │   ├── api_server.py     # FastAPI server
+│   │   ├── api_server.py     # Flask API server
 │   │   ├── hash-module/      # Hash operations
 │   │   ├── networking-module/# Network tools
 │   │   ├── password-analyzer-module/  # Password analysis
+│   │   ├── rsa-module/       # RSA demonstration (C)
 │   │   └── ask-gilfi-module/ # AI chatbot
 │   └── frontend/             # PyQt6 GUI application
 │       ├── main.py           # Application entry point
 │       ├── api_client.py     # Backend communication
 │       ├── modules/          # Tool implementations
 │       └── ui/               # UI components
-├── tests/                    # Test suites
-├── data/                     # Application data
-└── documentation/            # Complete documentation
+├── tests/                    # Integration test suites
+└── data/                     # Application data (wordlists, ports, assets)
 ```
 
 </details>
@@ -155,7 +154,7 @@ Gilfi/
 # 1. Start the Backend
 ./backend-docker.sh          # Linux/Mac
 # OR
-docker-compose -f docker-compose.backend.yaml up --build  # Windows
+docker compose -f docker-compose.backend.yaml up --build  # Windows
 
 # 2. Start the Frontend (in new terminal)
 ./run-gilfi.sh               # Linux/Mac
@@ -163,20 +162,7 @@ docker-compose -f docker-compose.backend.yaml up --build  # Windows
 run-gilfi.bat                # Windows
 ```
 
-### Option 2: Manual Setup
-
-```bash
-# 1. Install Dependencies
-pip install -r requirements.txt
-
-# 2. Start Backend
-cd src/backend
-python api_server.py
-
-# 3. Start Frontend (in new terminal)
-cd src/frontend
-python main.py
-```
+> The **first** Docker build takes several minutes (image, apt packages, pip, gcc compile, Ollama setup). Keep the window open until the container reports "up".
 
 ### Port Requirements
 
@@ -226,10 +212,10 @@ classDiagram
         -str base_url
         -int timeout
         +health_check() dict
-        +hash_generate(text, algo) dict
-        +hash_crack(hash, wordlist, algo) dict
+        +hash_generate(text, algorithm) str
+        +hash_crack(hash_value, hash_type, wordlist) str
         +password_analyze(password) dict
-        +port_scan(target, ports) dict
+        +scan_ports(target, scan_range) dict
     }
     
     MainWindow *-- ToolPage
@@ -247,24 +233,23 @@ classDiagram
         +hash_generate() dict
         +hash_crack() dict
         +password_analyze() dict
-        +port_scan() dict
+        +scan_ports() dict
     }
     
     class Hasher {
-        +hash(text, algorithm) str
-        +supported_algorithms() list
+        +hash(message, algorithm)$ str
     }
     
     class Cracker {
-        +crack(hash, wordlist, algo) str
-        -_apply_rules(word) list
-        -_cache_lookup(word, algo) str
+        +crack(hash_value, path, algorithm, use_shuffler) str
+        -_wordlist_shuffler(path) Generator
+        -_check_cache(hash_value) str
+        -_save_to_cache(hash_value, plain_text)
     }
     
     class PasswordAnalyzer {
         +analyze(password) dict
-        +generate_report(password) str
-        -_calculate_score(password) int
+        +generate_password(length, ...) dict
     }
     
     APIServer --> Hasher
@@ -277,34 +262,24 @@ classDiagram
 ```mermaid
 classDiagram
     class Hasher {
-        +SUPPORTED_ALGORITHMS: list
-        +hash(text: str, algorithm: str) str
-        +supported_algorithms() list
+        +hash(message: str, algorithm: str)$ str
     }
     
     class HashIdentifier {
-        +HASH_PATTERNS: dict
+        -hex_map: dict
         +identify(hash_value: str) list
-        -_check_md5(hash: str) bool
-        -_check_sha256(hash: str) bool
     }
     
     class Cracker {
-        +crack(hash, wordlist, algo, use_rules) str
-        -_load_wordlist(path) Generator
-        -_apply_rules(word) list
-        -_cache_lookup(word, algo) str
+        +RULE_TEMPLATES: list
+        +crack(hash_value, path, algorithm, use_shuffler, max_words) str
+        -_wordlist_shuffler(path) Generator
+        -_check_cache(hash_value) str
+        -_save_to_cache(hash_value, plain_text)
     }
-    
-    class WordlistShuffler {
-        +apply_all_rules(word) list
-        +capitalize(word) str
-        +leet_speak(word) str
-        +append_numbers(word) list
-    }
-    
-    Cracker o-- WordlistShuffler
 ```
+
+> **Note:** The rule-based wordlist transformation is **not** a separate class. It is implemented inside `Cracker` via the private method `_wordlist_shuffler()` together with the `RULE_TEMPLATES` list. `Hasher.hash()` is a **static method** (called as `Hasher.hash(text, algo)`).
 
 </details>
 
@@ -332,7 +307,7 @@ sequenceDiagram
     UI->>API: hash_generate("password", "sha256")
     API->>BE: POST /api/hash/generate
     
-    BE->>Hasher: hash("password", "sha256")
+    BE->>Hasher: Hasher.hash("password", "sha256")
     Hasher->>Hasher: Calculate SHA-256
     Hasher-->>BE: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
     
@@ -350,34 +325,22 @@ sequenceDiagram
     participant API as GilfiAPIClient
     participant BE as Backend API
     participant Cracker as Hash Cracker
-    participant WS as WordlistShuffler
     participant Cache as SQLiteCache
     
     User->>UI: Enter hash + algorithm
-    User->>UI: Enable "Use Rules"
     User->>UI: Click "Crack Hash"
     
-    UI->>API: hash_crack(hash, wordlist, algo, use_rules=True)
+    UI->>API: hash_crack(hash, hash_type, wordlist)
     API->>BE: POST /api/hash/crack
     
-    BE->>Cracker: crack(hash, wordlist, algo, use_rules=True)
+    BE->>Cracker: crack(hash, path, algorithm, use_shuffler=True)
     
     loop For each word in wordlist
-        Cracker->>Cache: Lookup cached hash
+        Cracker->>Cache: _check_cache(candidate)
         
         alt Cache miss
-            Cracker->>Cracker: hash_word(word, algo)
-            Cracker->>Cache: Store in cache
-        end
-        
-        alt Rules enabled
-            Cracker->>WS: apply_all_rules(word)
-            WS-->>Cracker: List of variations
-            
-            loop For each variation
-                Cracker->>Cracker: hash_word(variation, algo)
-                Cracker->>Cracker: compare(target, candidate)
-            end
+            Cracker->>Cracker: apply RULE_TEMPLATES + hash
+            Cracker->>Cache: _save_to_cache(...)
         end
         
         alt Match found
@@ -405,23 +368,23 @@ sequenceDiagram
     User->>UI: Enter port range "1-1000"
     User->>UI: Click "Scan Ports"
     
-    UI->>API: port_scan(target, ports)
+    UI->>API: scan_ports(target, scan_range)
     API->>BE: POST /api/networking/port_scanner
     
-    BE->>Scanner: scan_ports(target, ports, "tcp")
+    BE->>Scanner: start_scan(ports.json)
     
     loop For each port in range
-        Scanner->>Target: TCP Connect (port)
+        Scanner->>Target: TCP/UDP Connect (port)
         
         alt Port open
             Target-->>Scanner: Connection accepted
-            Scanner->>Scanner: _identify_service(port)
+            Scanner->>Scanner: Identify service
         else Port closed
             Target-->>Scanner: Connection refused
         end
     end
     
-    Scanner-->>BE: Complete scan results
+    Scanner-->>BE: get_all_ports()
     BE-->>API: JSON response
     API-->>UI: Return results
     UI->>User: Display results
@@ -600,51 +563,48 @@ stateDiagram-v2
 #### Test Implementation
 
 ```python
-import pytest
+import unittest
+import hashlib
 from hash_lib.hash_core.hasher import Hasher
 
-class TestHasherEquivalenceClasses:
-    @pytest.fixture
-    def hasher(self):
-        return Hasher()
-    
-    def test_ec1_empty_string(self, hasher):
+class TestHasherEquivalenceClasses(unittest.TestCase):
+    def test_ec1_empty_string(self):
         """EC1: Empty string input"""
-        result = hasher.hash("", "md5")
-        assert result == "d41d8cd98f00b204e9800998ecf8427e"
-        assert len(result) == 32
-    
-    def test_ec3_short_string(self, hasher):
+        result = Hasher.hash("", "md5")
+        self.assertEqual(result, "d41d8cd98f00b204e9800998ecf8427e")
+        self.assertEqual(len(result), 32)
+
+    def test_ec3_short_string(self):
         """EC3: Short string (1-10 chars)"""
-        result = hasher.hash("password", "sha256")
+        result = Hasher.hash("password", "sha256")
         expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
-        assert result == expected
-    
-    def test_ec7_unicode_characters(self, hasher):
+        self.assertEqual(result, expected)
+
+    def test_ec7_unicode_characters(self):
         """EC7: Unicode characters"""
-        text = "Hello 世界 🌍"
-        result = hasher.hash(text, "sha256")
-        assert len(result) == 64
-        assert result.isalnum()
-    
-    def test_ec11_unsupported_algorithm(self, hasher):
+        result = Hasher.hash("Hello 世界 🌍", "sha256")
+        self.assertEqual(len(result), 64)
+
+    def test_ec11_unsupported_algorithm(self):
         """EC11: Unsupported algorithm"""
-        with pytest.raises(ValueError):
-            hasher.hash("test", "sha999")
+        with self.assertRaises(ValueError):
+            Hasher.hash("test", "sha999")
+
+    def test_ec8_none_input(self):
+        """EC8: None input raises AttributeError"""
+        with self.assertRaises(AttributeError):
+            Hasher.hash(None, "sha256")
 ```
 
 ### Integration Tests
 
 ```python
-import pytest
 import requests
 
 class TestAPIIntegration:
-    @classmethod
-    def setup_class(cls):
-        cls.base_url = "http://localhost:8000"
-        cls.timeout = 10
-    
+    base_url = "http://localhost:8000"
+    timeout = 10
+
     def test_hash_generation_integration(self):
         """Test hash generation endpoint"""
         response = requests.post(
@@ -652,7 +612,7 @@ class TestAPIIntegration:
             json={"text": "password", "algorithm": "md5"},
             timeout=self.timeout
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "hash" in data
@@ -673,17 +633,13 @@ class TestAPIIntegration:
 ### Running Tests
 
 ```bash
-# Run all tests
-pytest
+# Run backend unit tests (unittest)
+cd src/backend/hash-module
+python -m pytest tests/
 
-# Run with coverage
-pytest --cov=src --cov-report=html
-
-# Run specific test file
-pytest tests/test_hasher.py
-
-# Run integration tests
-pytest tests/infrastructure/
+# Run integration tests (backend must be running)
+cd tests/infrastructure
+python -m pytest .
 ```
 
 </details>
@@ -799,7 +755,7 @@ def validate_ip_address(ip: str) -> tuple[bool, str]:
 
 ### Kanban Workflow
 
-GILFI verwendet **Kanban** mit **GitHub Projects** für Workflow-Management:
+GILFI uses **Kanban** with **GitHub Projects** for workflow management:
 
 ```
 ┌──────────┬──────────┬──────────────┬──────────────┬──────────┐
@@ -812,15 +768,15 @@ GILFI verwendet **Kanban** mit **GitHub Projects** für Workflow-Management:
 
 | Column | Purpose | WIP Limit | Entry Criteria |
 |--------|---------|-----------|----------------|
-| **Backlog** | Alle identifizierten Aufgaben | 80 | Issue erstellt |
-| **Ready** | Bereit zur Bearbeitung | 8 | Requirements klar, keine Blocker |
-| **In Progress** | Aktive Entwicklung | 12 | Developer zugewiesen |
-| **In Review** | Code Review & Testing | 4 | PR erstellt, Tests bestanden |
-| **Done** | Abgeschlossen | - | Merged & deployed |
+| **Backlog** | All identified tasks | 80 | Issue created |
+| **Ready** | Ready to be worked on | 8 | Requirements clear, no blockers |
+| **In Progress** | Active development | 12 | Developer assigned |
+| **In Review** | Code review & testing | 4 | PR created, tests passing |
+| **Done** | Completed | - | Merged & deployed |
 
 ### Completed Work Examples
 
-Aus der "Done" Spalte (115 Items):
+From the "Done" column (115 items):
 - ✅ Gilfi #22: Connect python modules with gui
 - ✅ Gilfi #33: AskGilfi AI Chatbot Module (7/7 subtasks)
 - ✅ Gilfi #71: Testing infrastructure
@@ -828,14 +784,14 @@ Aus der "Done" Spalte (115 Items):
 
 ### Weekly Team Presentations
 
-**Frequenz**: Einmal pro Woche  
-**Dauer**: 30-45 Minuten
+**Frequency**: Once per week  
+**Duration**: 30-45 minutes
 
 **Agenda**:
-1. **Fortschritt präsentieren** (15 min) - Demo der neuen Features
-2. **Herausforderungen besprechen** (10 min) - Probleme und Lösungen
-3. **Nächste Schritte** (10 min) - Prioritäten für kommende Woche
-4. **Feedback & Diskussion** (10 min) - Team-Feedback
+1. **Present progress** (15 min) - Demo of new features
+2. **Discuss challenges** (10 min) - Problems and solutions
+3. **Next steps** (10 min) - Priorities for the coming week
+4. **Feedback & discussion** (10 min) - Team feedback
 
 ### CI/CD Pipeline (GitHub Actions)
 
@@ -845,7 +801,7 @@ Commit → GitHub Actions → Tests → Security Scan → Build → Deploy
 
 #### Automated Checks
 
-Aus GitHub Commits sichtbar:
+Visible from GitHub commits:
 
 ```
 ✓ CodeQL / Analyze (c-cpp) (dynamic) - Successful in 1m
@@ -856,40 +812,42 @@ Aus GitHub Commits sichtbar:
 #### Active Workflows (7 total)
 
 1. **CodeQL Security Analysis**
-   - Scannt C/C++ Code (RSA Module)
-   - Scannt Python Code
-   - Findet Security-Vulnerabilities
+   - Scans C/C++ code (RSA module)
+   - Scans Python code
+   - Finds security vulnerabilities
 
 2. **Test Suite**
-   - Unit Tests (pytest)
+   - Unit Tests
    - Integration Tests
    - Coverage Report (>80%)
 
 3. **Build & Deploy**
-   - Docker Image bauen
-   - Tests in Container
-   - Deployment bei Success
+   - Build Docker image
+   - Run tests in container
+   - Deploy on success
 
 4. **Code Quality**
    - Linting (Flake8)
    - Type Checking (mypy)
    - Formatting (Black)
 
+> The workflow definitions live in the GitHub repository under `.github/workflows/` and are not part of this source snapshot.
+
 ### Quality Gates
 
-| Gate | Tool | Kriterium |
+| Gate | Tool | Criterion |
 |------|------|-----------|
-| Security | CodeQL | Keine kritischen Vulnerabilities |
-| Tests | pytest | 100% Pass, >80% Coverage |
-| Quality | Flake8 | Keine Errors |
-| Build | Docker | Erfolgreicher Build |
+| Security | CodeQL | No critical vulnerabilities |
+| Tests | pytest | 100% pass, >80% coverage |
+| Quality | Flake8 | No errors |
+| Build | Docker | Successful build |
 
 ### Metrics
 
-- **Lead Time**: ~10 Tage (Backlog → Done)
-- **Cycle Time**: ~4 Tage (In Progress → Done)
-- **Throughput**: ~9 Items/Woche
-- **Total Completed**: 115 Items
+- **Lead Time**: ~10 days (Backlog → Done)
+- **Cycle Time**: ~4 days (In Progress → Done)
+- **Throughput**: ~9 items/week
+- **Total Completed**: 115 items
 
 ### Version Control (GitHub Flow)
 
@@ -901,12 +859,12 @@ bugfix/* (bug fixes)
 ```
 
 **Pull Request Process**:
-1. Branch erstellen: `feature/your-feature`
-2. Code entwickeln mit klaren Commits
-3. PR erstellen auf GitHub
-4. CI/CD läuft automatisch
-5. Code Review (min. 1 Approval)
-6. Merge nach erfolgreichen Checks
+1. Create branch: `feature/your-feature`
+2. Develop with clear commits
+3. Open a PR on GitHub
+4. CI/CD runs automatically
+5. Code review (min. 1 approval)
+6. Merge after successful checks
 
 </details>
 
@@ -916,6 +874,8 @@ bugfix/* (bug fixes)
 
 <details>
 <summary><b>Click to expand API documentation</b></summary>
+
+> The backend is a **Flask REST API**. There is no Swagger/ReDoc UI; all endpoints are documented below.
 
 ### Base URL
 
@@ -934,7 +894,7 @@ Response:
   "status": "healthy",
   "service": "Gilfi Backend API",
   "version": "1.0.0",
-  "timestamp": "2026-04-28T11:00:00Z"
+  "timestamp": "2026-06-23T11:00:00Z"
 }
 ```
 
@@ -942,9 +902,12 @@ Response:
 ```json
 Response:
 {
-  "modules": ["hash", "password", "network", "rsa", "askgilfi"]
+  "success": true,
+  "modules": ["hash", "rsa", "askgilfi"],
+  "modules_details": { "hash": { "name": "Hash Module", "status": "available" } }
 }
 ```
+> Note: the password and network endpoints exist but are not listed in `modules`.
 
 #### Hash Module
 
@@ -959,8 +922,9 @@ Request:
 Response:
 {
   "success": true,
-  "hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-  "algorithm": "sha256"
+  "input": "password",
+  "algorithm": "sha256",
+  "hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
 }
 ```
 
@@ -973,10 +937,9 @@ Request:
 
 Response:
 {
-  "possible_types": [
-    {"type": "SHA-256", "confidence": 0.95},
-    {"type": "SHA-224", "confidence": 0.05}
-  ]
+  "success": true,
+  "hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+  "possible_types": ["SHA-256", "SHA3-256"]
 }
 ```
 
@@ -986,15 +949,17 @@ Request:
 {
   "hash": "5f4dcc3b5aa765d61d8327deb882cf99",
   "algorithm": "md5",
-  "wordlist": "rockyou.txt",
-  "use_rules": true
+  "wordlist": "common"
 }
 
 Response:
 {
+  "success": true,
+  "hash": "5f4dcc3b5aa765d61d8327deb882cf99",
+  "algorithm": "md5",
   "cracked": true,
   "plaintext": "password",
-  "time_taken": 2.5
+  "result": "password"
 }
 ```
 
@@ -1009,19 +974,17 @@ Request:
 
 Response:
 {
+  "success": true,
+  "password_length": 14,
   "strength": "STRONG",
+  "strength_level": 4,
   "score": 78,
-  "checks": {
-    "length_ok": true,
-    "has_uppercase": true,
-    "has_lowercase": true,
-    "has_digits": true,
-    "has_special": true,
-    "not_common": true
-  },
+  "is_secure": true,
+  "checks": { "...": "..." },
   "suggestions": [
     "Consider using a longer password (16+ characters)"
-  ]
+  ],
+  "details": { "...": "..." }
 }
 ```
 
@@ -1030,18 +993,20 @@ Response:
 Request:
 {
   "length": 16,
-  "uppercase": true,
-  "lowercase": true,
-  "digits": true,
-  "special": true,
+  "use_uppercase": true,
+  "use_lowercase": true,
+  "use_digits": true,
+  "use_special": true,
   "exclude_ambiguous": true
 }
 
 Response:
 {
-  "password": "xK9#mL2$pQ7&nR4",
-  "strength": "VERY_STRONG",
-  "score": 95
+  "success": true,
+  "password": "xK9#mL2$pQ7&nR4w",
+  "length": 16,
+  "character_sets": { "...": "..." },
+  "analysis": { "...": "..." }
 }
 ```
 
@@ -1056,15 +1021,11 @@ Request:
   "connection_type": "tcp"
 }
 
-Response:
+Response: dictionary of scanned ports, e.g.
 {
-  "success": true,
-  "open_ports": [
-    {"port": 22, "service": "SSH"},
-    {"port": 80, "service": "HTTP"},
-    {"port": 443, "service": "HTTPS"}
-  ],
-  "total_scanned": 1000
+  "22": {"state": "open", "service": "SSH"},
+  "80": {"state": "open", "service": "HTTP"},
+  "443": {"state": "open", "service": "HTTPS"}
 }
 ```
 
@@ -1074,18 +1035,18 @@ Response:
 ```json
 Request:
 {
-  "plaintext": "42"
+  "plaintext": 42
 }
 
 Response:
 {
-  "p": 61,
-  "q": 53,
-  "n": 3233,
-  "e": 17,
-  "d": 2753,
-  "ciphertext": 2557,
-  "decrypted": 42
+  "success": true,
+  "plaintext": 42,
+  "public_key": "(17, 3233)",
+  "private_key": "(2753, 3233)",
+  "ciphertext": "2557",
+  "decrypted": "42",
+  "result": "2557"
 }
 ```
 
@@ -1100,16 +1061,11 @@ Request:
 
 Response:
 {
-  "response": "A hash function is a mathematical algorithm that...",
-  "model": "granite4:350m"
+  "success": true,
+  "prompt": "What is a hash function?",
+  "response": "A hash function is a mathematical algorithm that..."
 }
 ```
-
-### Interactive API Documentation
-
-When the backend is running, visit:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
 
 </details>
 
@@ -1122,6 +1078,7 @@ When the backend is running, visit:
 
 - Ensure port 8000 is not in use
 - Check Docker is running (if using Docker)
+- On the first run, wait for the Docker build to finish (several minutes)
 - Verify all dependencies are installed
 
 </details>
@@ -1240,7 +1197,6 @@ When the backend is running, visit:
 - Choose wordlist (default: rockyou.txt)
 - Progress indicator shows status
 - Results show plaintext if found
-- Performance: 1M+ hashes/second
 - Operation can be cancelled
 
 #### US-013: RSA Encryption Demonstration
@@ -1276,7 +1232,6 @@ When the backend is running, visit:
 - Chat interface accessible via dock widget
 - Type questions and send with Enter
 - AI responds with relevant security information
-- Responses stream in real-time
 - Chat history preserved during session
 
 ### Story Mapping
@@ -1327,7 +1282,7 @@ When the backend is running, visit:
 
 ## License
 
-See [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) file for details.
 
 ### Ethical Use
 
@@ -1350,12 +1305,12 @@ See [LICENSE](LICENSE) file for details.
 - **Hashcat & John the Ripper**: Inspiration for hash cracking rules
 - **Ollama**: Local LLM runtime for AI features
 - **PyQt6**: Excellent cross-platform GUI framework
-- **FastAPI**: Modern, fast web framework for APIs
+- **Flask**: Lightweight web framework for the REST API
 
 ---
 
 > [!TIP]
-> For the complete interactive API documentation, visit `http://localhost:8000/docs` when the backend is running.
+> All API endpoints are documented in the [API Documentation](#api-documentation) section above.
 
 ---
 
